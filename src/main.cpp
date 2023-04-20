@@ -14,34 +14,20 @@ using namespace coplus;
 //        co_await stream.write(buffer, size);
 //    }
 //}
+
 task<> test(int i)
 {
-    //fmt::print("task:{}\n",i);
-    for (int j = 0; j < 5; ++j) {
-//        std::stringstream ss;
-//        ss<<std::this_thread::get_id();
-//        fmt::print("task{} in thread:{}\n",i,ss.str());
-        co_await DelayAwaiter::delay(std::chrono::seconds(2));
-    }
+    co_await DelayAwaiter::delay(std::chrono::seconds(1));
+    std::cout<<"over"<<'\n';
 }
-
-task<> test1(int i)
-{
-    for (int j = 0; j < 10; ++j){
-//        std::stringstream ss;
-//        ss<<std::this_thread::get_id();
-//        fmt::print("task{} in thread:{}\n",i,ss.str());
-        co_await DelayAwaiter::delay(std::chrono::seconds(1));
-    }
-}
-
-
 
 
 int main()
 {
-    for (int i = 0; i < 500000; ++i) {
+    for (int i = 0; i < 5000; ++i) {
         co_runtime::spawn(test(i));
     }
-    co_runtime::block_on(test1(20));
+    co_runtime::block_on(test(20));
 }
+
+
