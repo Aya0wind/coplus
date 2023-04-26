@@ -17,7 +17,7 @@ namespace coplus::detail {
         int epoll_event_register(handle_type fd, Interest interest, int op, void* udata, bool et_mode) const {
             epoll_data data;
             data.ptr = udata;
-            event event{.events = 0, .data = data};
+            sys_event event{.events = 0, .data = data};
             if (interest & Interest::READABLE) {
                 event.events |= EPOLLIN;
             }
@@ -40,7 +40,7 @@ namespace coplus::detail {
         }
 
 
-        int select_impl(::std::vector<event>& events, ::std::chrono::milliseconds timeout) const {
+        int select_impl(::std::vector<sys_event>& events, ::std::chrono::milliseconds timeout) const {
             return epoll_wait(this->epoll_fd, events.data(), events.size(), timeout.count());
         }
 

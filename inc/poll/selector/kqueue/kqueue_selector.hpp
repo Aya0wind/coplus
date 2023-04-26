@@ -15,7 +15,7 @@ namespace coplus::detail {
     class kqueue_selector : public selector_base<kqueue_selector> {
         friend class selector_base;
         int kqueue_fd;
-        int kevent_register(event* changes, int nchanges, event* events, int nevents, const timespec* timeout) const {
+        int kevent_register(sys_event* changes, int nchanges, sys_event* events, int nevents, const timespec* timeout) const {
             return kevent(this->kqueue_fd, changes, nchanges, events, nevents, timeout);
         }
 
@@ -25,13 +25,13 @@ namespace coplus::detail {
         }
         static int wake_impl(handle_type sys_handle) {
             //send the stop signal to the selector
-            event ev{};
+            sys_event ev{};
             EV_SET(&ev, 0, EVFILT_USER, EV_ADD | EV_RECEIPT | EV_CLEAR, NOTE_TRIGGER, 0, nullptr);
             return kevent(sys_handle, &ev, 1, &ev, 1, nullptr);
         }
 
 
-        int select_impl(::std::vector<event>& events, ::std::chrono::milliseconds timeout) const {
+        int select_impl(::std::vector<sys_event>& events, ::std::chrono::milliseconds timeout) const {
             struct timespec sys_timeout {};
             sys_timeout.tv_sec = 0;
             sys_timeout.tv_nsec = (timeout.count() % 1000) * 1000000;
@@ -39,7 +39,7 @@ namespace coplus::detail {
         }
 
         void register_event_impl(handle_type file_handle, Interest interest, int data, void* udata) const {
-            event ev[ 4 ];
+            sys_event ev[ 4 ];
             int changes_index = 0;
             auto sys_interest = (decltype(EVFILT_USER)) interest;
             int flags = EV_CLEAR | EV_RECEIPT | EV_ADD;
@@ -64,7 +64,7 @@ namespace coplus::detail {
 
         void deregister_event_impl(handle_type file_handle, Interest interest) const {
             auto flags = EV_DELETE | EV_RECEIPT;
-            event ev[ 4 ];
+            sys_event ev[ 4 ];
             int changes_index = 0;
             auto sys_interest = (decltype(EVFILT_USER)) interest;
             if (interest & Interest::READABLE) {

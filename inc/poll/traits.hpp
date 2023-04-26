@@ -19,7 +19,7 @@ namespace coplus::detail {
     template<class Selector>
     concept SelectorTrait = requires(Selector s) {
         {
-            s.select(std::declval<events&>(), std::declval<::std::chrono::milliseconds>())
+            s.select(std::declval<sys_events&>(), std::declval<::std::chrono::milliseconds>())
             } -> std::same_as<int>;
         {
             s.register_event(std::declval<handle_type>(), std::declval<Interest>(), std::declval<int>(), std::declval<void*>())
@@ -59,7 +59,7 @@ namespace coplus::detail {
         [[gnu::always_inline]] int wake(handle_type sys_handle) {
             return static_cast<const SelectorImpl*>(this)->wake_impl(sys_handle);
         }
-        [[gnu::always_inline]] int select(::std::vector<event>& events, ::std::chrono::milliseconds timeout) const {
+        [[gnu::always_inline]] int select(::std::vector<sys_event>& events, ::std::chrono::milliseconds timeout) const {
             return static_cast<const SelectorImpl*>(this)->select_impl(events, timeout);
         }
         [[gnu::always_inline]] void register_event(handle_type file_handle, Interest interest, int data, void* udata) const {
