@@ -39,3 +39,4 @@ build
 #idea file
 .idea
 .DS_Store
+.vscode

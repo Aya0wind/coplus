@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <condition_variable>
 #include <list>
 #include <mutex>
 //a list can be access thread safe

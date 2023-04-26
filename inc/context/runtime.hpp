@@ -2,17 +2,19 @@
 //
 // Created by junjian LI on 2022/9/7.
 //
-#include <map>
-#include <thread>
-#include <queue>
+#include "components/mpmc_channel.hpp"
 #include "coroutine/task.hpp"
 #include "event_loop.hpp"
+#include <map>
+#include <queue>
+#include <thread>
 namespace coplus {
 
     class co_runtime {
         size_t worker_num;
         std::map<int, std::vector<std::unique_ptr<event_loop>>> worker_event_loops;
         std::vector<std::thread> worker_threads;
+        mpmc_channel<task<>> global_task_queue;
         std::atomic<bool> needStop{false};
         event_loop main_loop;
 
@@ -26,6 +28,10 @@ namespace coplus {
             return targetThread;
         }
 
+        mpmc_channel<task<>>& get_global_task_queue() {
+            return global_task_queue;
+        };
+
         void schedule_task_to_event_loop(task<void> task, std::unique_ptr<event_loop> target_event_loop) {
             if (task.is_ready()) {
                 return;
@@ -38,13 +44,11 @@ namespace coplus {
             worker_event_loops[ static_cast<int>(context_task_num) ].emplace_back(std::move(target_event_loop));
         }
 
-    public:
-        explicit co_runtime(size_t worker = 2)
-            : worker_num(worker), main_loop(needStop) {
+        void start_wokers() {
             //initialize threadMap
             auto& event_loops = worker_event_loops[ 0 ];
-            event_loops.reserve(worker);
-            for (int i = 0; i < worker; ++i) {
+            event_loops.reserve(worker_num);
+            for (int i = 0; i < worker_num; ++i) {
                 auto event_loop = std::make_unique<class event_loop>(needStop);
                 auto systemThread = ::std::thread([ loop = std::ref(*event_loop) ]() {
                     loop();
@@ -53,8 +57,16 @@ namespace coplus {
                 event_loops.emplace_back(std::move(event_loop));
             }
         }
+
+
+    public:
+        explicit co_runtime(size_t worker = 2) :
+            worker_num(worker), main_loop(needStop) {
+        }
         static void run() {
-            get_global_runtime().main_loop();
+            auto& runtime = get_global_runtime();
+            runtime.start_wokers();
+            runtime.main_loop();
         }
         size_t get_worker_num() const {
             return worker_num;
@@ -87,6 +99,11 @@ namespace coplus {
             static co_runtime global_runtime;
             return global_runtime;
         }
+
+        void schedule_task(task<void> task) {
+            global_task_queue.push_back(std::move(task));
+        }
+
 
         ~co_runtime() {
             needStop.store(true, std::memory_order_release);

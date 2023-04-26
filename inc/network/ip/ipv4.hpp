@@ -5,6 +5,7 @@
 #pragma once
 #include <arpa/inet.h>
 #include <cstdint>
+#include <string>
 namespace coplus {
 
     class ipv4 {
@@ -18,8 +19,8 @@ namespace coplus {
             ip_ = (p1 << 24) | (p2 << 16) | (p3 << 8) | p4;
         }
 
-        ipv4(const ipv4& other)
-            : ip_(other.ip_) {
+        ipv4(const ipv4& other) :
+            ip_(other.ip_) {
         }
         ipv4& operator=(const ipv4& other) noexcept = default;
         ipv4(ipv4&& other) noexcept = default;
@@ -50,15 +51,15 @@ namespace coplus {
         uint16_t port_;
 
     public:
-        net_address(const IP& ip, uint16_t port)
-            : ip_(ip), port_(port) {
+        net_address(const IP& ip, uint16_t port) :
+            ip_(ip), port_(port) {
         }
         net_address(const net_address& other) = default;
         net_address& operator=(const net_address& other) = default;
         net_address(net_address&& other) = default;
         net_address& operator=(net_address&& other) noexcept = default;
-        net_address(int p1, int p2, int p3, int p4, uint16_t port)
-            : ip_(p1, p2, p3, p4), port_(port) {
+        net_address(int p1, int p2, int p3, int p4, uint16_t port) :
+            ip_(p1, p2, p3, p4), port_(port) {
         }
 
         void set_port(uint16_t port) {
@@ -71,11 +72,10 @@ namespace coplus {
         uint16_t port() const {
             return port_;
         }
-        friend ::std::string to_string(const net_address<IP>& addr);
     };
 }// namespace coplus
 
 template<class IP>
 [[nodiscard]] std::string to_string(const coplus::net_address<IP>& addr) {
-    return std::to_string(addr.ip_) + ":" + std::to_string(addr.port_);
+    return std::to_string(addr.ip()) + ":" + std::to_string(addr.port());
 }

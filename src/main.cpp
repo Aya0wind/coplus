@@ -1,3 +1,4 @@
+
 #include "context/runtime.hpp"
 #include "context/worker_thread_context.hpp"
 #include "network/tcp/tcp_stream.hpp"
@@ -29,17 +30,15 @@ using namespace coplus;
 //    }
 //}
 //
-task<> client_test()
-{
-    while (true){
+task<> client_test() {
+    while (true) {
         co_await 1000_ms;
         fmt::print("point 1\n");
     }
 }
 
 
-int main()
-{
+int main() {
     print_thread_id("main");
     co_runtime::spawn(client_test());
     co_runtime::run();

@@ -22,29 +22,34 @@ namespace coplus::detail {
 
     class poller {
         selector inner_selector;
+
     public:
-        poller()=default;
+        poller() = default;
         template<class duration_type, class period>
         int poll_events(events& events, ::std::chrono::duration<duration_type, period> timeout) {
             return inner_selector.select(events, timeout);
         }
         void wake_poller() {
-           auto handle =  inner_selector.get_handle();
-             inner_selector.wake(handle);
+            auto handle = inner_selector.get_handle();
+            inner_selector.wake(handle);
         }
 
-        [[nodiscard]] const selector& get_selector() const{
+        [[nodiscard]] const selector& get_selector() const {
+            return inner_selector;
+        }
+
+        [[nodiscard]] selector& get_selector() {
             return inner_selector;
         }
 
         template<SourceTrait<selector> source_type>
-        void register_event(source_type&& source, token_type token, Interest interest, intptr_t task_id) {
-            source.register_event(inner_selector, token, interest, task_id);
+        void register_event(source_type& source, intptr_t task_id) {
+            source.register_event(inner_selector, task_id);
         }
 
         template<SourceTrait<selector> source_type>
-        void deregister_event(source_type&& source, token_type token, Interest interest) {
-            source.deregister_event(inner_selector, token, interest);
+        void deregister_event(source_type& source) {
+            source.deregister_event(inner_selector);
         }
     };
 

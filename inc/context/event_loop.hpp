@@ -5,14 +5,17 @@
 #pragma once
 #include "worker_thread_context.hpp"
 
-namespace coplus{
+namespace coplus {
     class event_loop {
         concurrent_list<task<void>> global_task_queue;
         std::atomic<bool>& stop_token;
         std::atomic<size_t> task_size{0};
+
     public:
-        event_loop(std::atomic<bool>& stop_token):stop_token(stop_token){}
-        void stop(){
+        event_loop(std::atomic<bool>& stop_token) :
+            stop_token(stop_token) {
+        }
+        void stop() {
             global_task_queue.down();
         }
         void run_task_blocking(task<void> task) {
@@ -25,13 +28,13 @@ namespace coplus{
                 }
                 int event_size = current_worker_context.get_poller().poll_events(events_buffer, std::chrono::milliseconds(100));
                 if (event_size > 0) {
-                    if ((events_buffer[ 0 ].flags & EV_ERROR) != 0 && events_buffer[ 0 ].data != 0) {
-                        fmt::print("error event:{}\n", strerror(events_buffer[ 0 ].data));
-                        return;
-                    }
-                    else if ((events_buffer[ 0 ].flags & EV_EOF) != 0) {
-                        return;
-                    }
+                    // if ((events_buffer[ 0 ].flags & EV_ERROR) != 0 && events_buffer[ 0 ].data != 0) {
+                    //     fmt::print("error event:{}\n", strerror(events_buffer[ 0 ].data));
+                    //     return;
+                    // }
+                    // else if ((events_buffer[ 0 ].flags & EV_EOF) != 0) {
+                    //     return;
+                    // }
                 }
             }
         }
@@ -75,14 +78,8 @@ namespace coplus{
 
         void wake_suspend_tasks(detail::events& events, int event_size) {
             for (int i = 0; i < event_size; i++) {
-                if (events[ i ].filter != EVFILT_USER) {
-                    auto task_id = (intptr_t) events[ i ].udata;
-                    current_worker_context.wake_task(task_id);
-                }
-                else {
-                    events[ i ].flags = EV_DELETE;
-                    kevent(current_worker_context.poller_sys_handle(), &events[ i ], 1, nullptr, 0, nullptr);
-                }
+                auto task_id = (intptr_t) events[ i ].data.u64;
+                current_worker_context.wake_task(task_id);
             }
         }
 
@@ -101,4 +98,4 @@ namespace coplus{
         }
     };
 
-}// namespace coplus::detail
+}// namespace coplus

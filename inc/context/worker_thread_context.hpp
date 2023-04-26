@@ -8,6 +8,7 @@
 #include "coroutine/task.hpp"
 #include "poll/poller.hpp"
 #include <atomic>
+#include <cstdint>
 #include <deque>
 #include <iostream>
 #include <sstream>
@@ -18,7 +19,7 @@ namespace coplus {
         detail::poller poller;
         std::unordered_map<int64_t, task<void>> suspend_tasks;
         std::list<task<void>> ready_task_queue;
-        int64_t current_task_id{0};
+        intptr_t current_task_id{0};
         void wake_task(int64_t task_id) {
             if (suspend_tasks.contains(task_id)) {
                 ready_task_queue.emplace_back(std::move(suspend_tasks[ task_id ]));
@@ -30,7 +31,7 @@ namespace coplus {
         }
 
     public:
-        [[nodiscard]] int64_t get_current_task_id() const {
+        [[nodiscard]] intptr_t get_current_task_id() const {
             return current_task_id;
         }
         detail::poller& get_poller() {
@@ -79,7 +80,6 @@ namespace coplus {
     };
 
     inline thread_local worker_thread_context current_worker_context;
-
 
 
 }// namespace coplus

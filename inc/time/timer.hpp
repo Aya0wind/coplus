@@ -11,20 +11,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <unistd.h>
-
+#ifdef __linux__
+#include "poll/selector/epoll/epoll_timer.hpp"
+#endif
 namespace coplus {
 
-
-
-
     struct DelayAwaiter {
-        time_t expire_time;
-        inline static std::atomic<intptr_t> id{0};
-        intptr_t timer_id;
-        template<class duration_type, class period>
-        explicit DelayAwaiter(std::chrono::duration<duration_type, period> duration)
-            : expire_time(std::chrono::duration_cast<std::chrono::milliseconds>(duration).count()), timer_id(id++) {
-        }
+        epoll_timer timer;
 
         template<class duration_type, class period>
         static DelayAwaiter delay(std::chrono::duration<duration_type, period> duration) {
@@ -33,22 +26,8 @@ namespace coplus {
 
         DelayAwaiter() = delete;
         DelayAwaiter(const DelayAwaiter&) = delete;
-        DelayAwaiter(DelayAwaiter&& others)
-            : expire_time(others.expire_time), timer_id(others.timer_id) {
-        }
-
-        void register_event(selector& selector, detail::token_type token, detail::Interest interest, intptr_t task_id) const {
-            selector.register_event(
-                    static_cast<uintptr_t>(timer_id),
-                    interest,
-                    static_cast<int>(expire_time),
-                    (void*) task_id);
-        }
-
-        void deregister_event(selector& selector, detail::token_type token, detail::Interest interest) const {
-            selector.deregister_event(
-                    static_cast<int>(timer_id),
-                    interest);
+        DelayAwaiter(std::chrono::milliseconds timeout, bool repeat = false) :
+            timer(timeout, repeat) {
         }
 
         bool await_ready() {
@@ -57,12 +36,8 @@ namespace coplus {
         }
 
         void await_suspend(auto handle) {
-            current_worker_context
-                    .get_poller()
-                    .register_event(*this,
-                                    this->timer_id,
-                                    detail::Interest::TIMER,
-                                    current_worker_context.get_current_task_id());
+            auto& selector = current_worker_context.get_poller().get_selector();
+            timer.register_event(selector, current_worker_context.get_current_task_id());
         }
 
         void await_resume() {
@@ -73,7 +48,7 @@ namespace coplus {
         bool repeat{false};
     };
 
-    DelayAwaiter operator ""_ms(unsigned long long ms){
+    inline DelayAwaiter operator""_ms(unsigned long long ms) {
         return DelayAwaiter::delay(std::chrono::milliseconds(ms));
     }
 
