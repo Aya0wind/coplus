@@ -1,33 +1,46 @@
-#include "io/poll.hpp"
-#include "timer/timer.hpp"
+#include "context/runtime.hpp"
+#include "context/worker_thread_context.hpp"
+#include "network/tcp/tcp_stream.hpp"
+#include "poll/poller.hpp"
+#include "time/timer.hpp"
+#include <atomic>
 #include <fmt/format.h>
 #include <sstream>
 using namespace coplus;
 
-//task<> test() {
-//    tcp_listener listener;
-//    listener.bind("0.0.0.0", 8080);
-//    auto stream = co_await listener.accept();
-//    char buffer[1024];
-//    while (true){
-//        size_t size = co_await stream.read(buffer, 1024);
-//        co_await stream.write(buffer, size);
+//task<> server_test()
+//{
+//    tcp_listener listener(net_address(ipv4("0.0.0.0"), 8082));
+//    char buffer[ 1024 ];
+//    fmt::print("point 1\n");
+//    while (true) {
+//        fmt::print("point 2\n");
+//        auto tcp_stream = co_await listener.accept();
+//        fmt::print("point 3\n");
+//        auto loop  =  [&buffer,tcp_stream = std::move(tcp_stream)] ()->task<>{
+//            fmt::print("point 4\n");
+//            while (true) {
+//                fmt::print("point 5\n");
+//                size_t size = co_await tcp_stream.read(buffer, sizeof buffer);
+//                co_await tcp_stream.write(buffer, size);
+//            }
+//        };
+//        current_worker_context.add_ready_task(std::move(co_runtime::make_task(loop)));
 //    }
 //}
-
-task<> test(int i)
+//
+task<> client_test()
 {
-    co_await DelayAwaiter::delay(std::chrono::seconds(1));
-    std::cout<<"over"<<'\n';
+    while (true){
+        co_await 1000_ms;
+        fmt::print("point 1\n");
+    }
 }
 
 
 int main()
 {
-    for (int i = 0; i < 5000; ++i) {
-        co_runtime::spawn(test(i));
-    }
-    co_runtime::block_on(test(20));
+    print_thread_id("main");
+    co_runtime::spawn(client_test());
+    co_runtime::run();
 }
-
-
