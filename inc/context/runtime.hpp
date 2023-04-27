@@ -8,6 +8,7 @@
 #include "poll/event.hpp"
 #include <map>
 #include <queue>
+#include <string>
 #include <thread>
 #include <vector>
 namespace coplus {
@@ -96,6 +97,9 @@ namespace coplus {
             worker_num(worker), main_loop(needStop) {
             start_wokers();
         }
+        static void print_global_task_queue_size() {
+            std::cout << "global_task_queue size: " <<  get_global_runtime().global_task_queue.size() << std::endl;
+        }
         static void run() {
             auto& runtime = get_global_runtime();
             runtime.main_loop();
@@ -124,7 +128,7 @@ namespace coplus {
 
         template<std::invocable Fn>
         static void spawn(Fn&& fn) {
-            auto task = make_task(std::forward<Fn>(fn));
+            auto task = fn();
             spawn(std::move(task));
         }
 
@@ -162,10 +166,17 @@ namespace coplus {
                 }
                 //尝试推进所有就绪任务
                 current_worker_context.poll_all_task();
-                //轮询事件
-                int event_size = current_worker_context.poller.poll_events(events_buffer, std::chrono::milliseconds(100));
-                //唤醒监听事件的任务，重新从等待队列加入就绪队列
-                wake_suspend_tasks(events_buffer, event_size);
+                std::stringstream ss;
+                ss<<std::this_thread::get_id();
+
+                fmt::print("thread:{},ready_task_queue size: {}\n",ss.str(),current_worker_context.ready_task_queue.size());
+                fmt::print("thread:{},suspend_task_queue size: {}\n",ss.str(), current_worker_context.suspend_tasks.size());
+                if(!current_worker_context.suspend_tasks.empty()){
+                    //轮询事件
+                    int event_size = current_worker_context.poller.poll_events(events_buffer, std::chrono::milliseconds(100));
+                    //唤醒监听事件的任务，重新从等待队列加入就绪队列
+                    wake_suspend_tasks(events_buffer, event_size);
+                }
             }
         }
     }

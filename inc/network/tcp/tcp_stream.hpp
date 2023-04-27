@@ -38,12 +38,13 @@ namespace coplus {
         }
 
         void await_suspend(auto handle) {
-            current_worker_context
-                    .get_poller()
-                    .register_event(*this, current_worker_context.get_current_task_id());
+            auto& poller = current_worker_context.get_poller();
+            poller.register_event(*this, current_worker_context.get_current_task_id());
         }
 
         auto await_resume() {
+            auto& poller = current_worker_context.get_poller();
+            poller.deregister_event(*this);
             return _socket.read(buffer, size);
         }
         friend class tcp_stream;
@@ -68,7 +69,6 @@ namespace coplus {
         }
 
         bool await_ready() {
-            //bool r = start_duration.count() + time.expire_time<=std::chrono::system_clock::now().time_since_epoch().count();
             return false;
         }
         detail::handle_type get_handle() const {
@@ -89,19 +89,11 @@ namespace coplus {
 
     public:
         tcp_stream() = default;
-        tcp_stream(sys_socket socket) :
-            _socket(std::move(socket)) {
-        }
+        tcp_stream(sys_socket socket) :_socket(std::move(socket)) {}
         tcp_stream(const tcp_stream&) = delete;
         tcp_stream& operator=(const tcp_stream&) = delete;
-        tcp_stream(tcp_stream&& other) noexcept
-            :
-            _socket(std::move(other._socket)) {
-        }
-        tcp_stream& operator=(tcp_stream&& other) noexcept {
-            _socket = std::move(other._socket);
-            return *this;
-        }
+        tcp_stream(tcp_stream&& other) noexcept = default;
+        tcp_stream& operator=(tcp_stream&& other) noexcept =default;
 
         static auto connect(ipv4 ip, uint16_t port);
         [[nodiscard]] auto read(char* buffer, size_t size) const {
@@ -109,6 +101,9 @@ namespace coplus {
         }
         [[nodiscard]] auto write(const char* buffer, size_t size) const {
             return socket_write_awaiter(buffer, size, _socket);
+        }
+        [[nodiscard]] socket_t raw_fd() const{
+            return _socket.raw_fd();
         }
         friend class socket_listen_awaiter;
         friend class socket_read_awaiter;

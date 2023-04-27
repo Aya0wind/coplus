@@ -26,6 +26,8 @@ namespace coplus::detail {
 
     public:
         poller() = default;
+        poller(const poller&) = delete;
+        poller(poller&&) = delete;
         template<class duration_type, class period>
         int poll_events(events& events, ::std::chrono::duration<duration_type, period> timeout) {
             return inner_selector.select(events, timeout);

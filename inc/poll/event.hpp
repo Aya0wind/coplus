@@ -69,26 +69,26 @@ namespace coplus::detail {
             return reinterpret_cast<intptr_t>(sys_event.udata);
         }
         [[nodiscard]] bool is_readable_impl() const {
-            return sys_event.filter & EVFILT_READ || sys_event.filter & EVFILT_USER;
+            return sys_event.filter == EVFILT_READ || sys_event.filter == EVFILT_USER;
         }
         [[nodiscard]] bool is_writeable_impl() const {
-            return sys_event.filter & EVFILT_WRITE;
+            return sys_event.filter == EVFILT_WRITE;
         }
         [[nodiscard]] bool is_aio_impl() const {
-            return sys_event.filter & EVFILT_AIO;
+            return sys_event.filter == EVFILT_AIO;
         }
         [[nodiscard]] bool is_timer_impl() const {
-            return sys_event.filter & EVFILT_TIMER;
+            return sys_event.filter == EVFILT_TIMER;
         }
         [[nodiscard]] bool is_error_impl() const {
-            return sys_event.flags & EV_ERROR || (sys_event.flags & EV_EOF) != 0 && sys_event.fflags != 0;
+            return sys_event.flags == EV_ERROR || sys_event.flags == EV_EOF && sys_event.fflags != 0;
         }
 
         [[nodiscard]] bool is_read_closed_impl() const {
-            return (sys_event.flags & EVFILT_READ) != 0 && (sys_event.flags & EV_EOF) != 0;
+            return sys_event.filter == EVFILT_READ&&sys_event.flags == EV_EOF;
         }
         [[nodiscard]] bool is_write_closed_impl() const {
-            return (sys_event.flags & EVFILT_WRITE) != 0 && (sys_event.flags & EV_EOF) != 0;
+            return sys_event.filter == EVFILT_WRITE&& sys_event.flags == EV_EOF;
         }
         [[nodiscard]] bool is_priority_impl() const {
             return false;

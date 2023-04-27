@@ -1,38 +1,12 @@
 //
-// Created by junjian LI on 2022/9/7.
+// Created by junjian LI on 2023/4/27.
 //
 
 #pragma once
-#include "components/id_generator.hpp"
-#include "context/runtime.hpp"
-#include "context/worker_thread_context.hpp"
-#include "poll/poller.hpp"
 #include <chrono>
-#include <cstddef>
-#include <cstdint>
-#include <unistd.h>
-
-#ifdef __APPLE__
-#include "poll/selector/kqueue/kqueue_timer.hpp"
-namespace coplus {
-    using timer_type = coplus::kqueue_timer;
-}
-#elif _WIN32
-#include "poll/selector/iocp/iocp_timer.hpp"
-namespace coplus {
-    using timer_type = coplus::iocp_timer;
-}
-#elif __linux__
-#include "poll/selector/epoll/kqueue_timer.hpp"
-namespace coplus {
-    using timer_type = coplus::epoll_timer;
-}
-#endif
-namespace coplus {
-
+namespace coplus{
     struct DelayAwaiter {
-        timer_type timer;
-
+        int expire_times;
         template<class duration_type, class period>
         static DelayAwaiter delay(std::chrono::duration<duration_type, period> duration) {
             return DelayAwaiter(duration);
@@ -40,8 +14,10 @@ namespace coplus {
 
         DelayAwaiter() = delete;
         DelayAwaiter(const DelayAwaiter&) = delete;
-        DelayAwaiter(std::chrono::milliseconds timeout, bool repeat = false) :
-            timer(timeout, repeat) {
+        template<class duration_type, class period>
+        DelayAwaiter(std::chrono::duration<duration_type, period>  timeout, bool repeat = false) :
+            expire_times(std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()),repeat(repeat)
+        {
         }
 
         bool await_ready() {
@@ -50,13 +26,16 @@ namespace coplus {
         }
 
         void await_suspend(auto handle) {
+            auto& timer = current_worker_context.get_timer();
+            timer.set_expire_timeout(expire_times);
             auto& selector = current_worker_context.get_poller().get_selector();
             timer.register_event(selector, current_worker_context.get_current_task_id());
         }
 
         void await_resume() {
-            auto& selector = current_worker_context.get_poller().get_selector();
-            timer.deregister_event(selector);
+            //auto& timer = current_worker_context.get_timer();
+            //auto& selector = current_worker_context.get_poller().get_selector();
+            //timer.deregister_event(selector);
         }
 
     private:
@@ -91,4 +70,4 @@ namespace coplus {
         return DelayAwaiter::delay(std::chrono::hours(d * 24));
     }
 
-}// namespace coplus
+}

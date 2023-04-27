@@ -22,7 +22,7 @@ namespace coplus {
 #include <unistd.h>
     using socket_t = int;
 #define SYS_CALL(func, ...) [](auto&&... args) {int result__ = func(args...); if(result__<0) throw std::runtime_error(std::string("syscall `"#func"` failed:")+ strerror(errno));else return result__; }(__VA_ARGS__);
-    struct [[maybe_unused]] sys_tcp_socket_options {
+    struct [[maybe_unused]] sys_tcp_socket_operation {
         [[gnu::always_inline]] static socket_t create() {
             socket_t socket = SYS_CALL(::socket, AF_INET, SOCK_STREAM, IPPROTO_TCP);
             //fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) | O_NONBLOCK);
@@ -79,10 +79,10 @@ namespace coplus {
 #include <unistd.h>
     using socket_t = int;
 #define SYS_CALL(func, ...) [](auto&&... args) {int result__ = func(args...); if(result__<0) throw std::runtime_error(std::string("syscall `"#func"` failed:")+ strerror(errno));else return result__; }(__VA_ARGS__);
-    struct [[maybe_unused]] sys_tcp_socket_options {
+    struct [[maybe_unused]] sys_tcp_socket_operation {
         [[gnu::always_inline]] static socket_t create() {
             socket_t socket = SYS_CALL(::socket, AF_INET, SOCK_STREAM, IPPROTO_TCP);
-            //fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) | O_NONBLOCK);
+            fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) | O_NONBLOCK);
             return socket;
         }
         [[gnu::always_inline]] static int close(socket_t socket) {
@@ -138,7 +138,7 @@ namespace coplus {
         using socket_t = int;
         socket_t handle_;
         void set_default_socket_option() const {
-            sys_tcp_socket_options::default_socket_option(handle_);
+            sys_tcp_socket_operation::default_socket_option(handle_);
         }
 
     public:
@@ -149,7 +149,7 @@ namespace coplus {
             return handle_;
         }
         sys_socket() :
-            handle_(sys_tcp_socket_options::create()) {
+            handle_(sys_tcp_socket_operation::create()) {
             set_default_socket_option();
         }
         sys_socket(sys_socket&& other) :
@@ -162,50 +162,52 @@ namespace coplus {
             return *this;
         }
         ~sys_socket() {
-            //if (handle_ != -1) sys_tcp_socket_options::close(handle_);
+            //if (handle_ != -1) sys_tcp_socket_operation::close(handle_);
         }
         sys_socket(const sys_socket&) = delete;
         sys_socket& operator=(const sys_socket&) = delete;
         template<class IP>
         void bind(const net_address<IP>& address) const {
-            sys_tcp_socket_options::bind(handle_, address);
+            sys_tcp_socket_operation::bind(handle_, address);
         }
         void listen() const {
-            sys_tcp_socket_options::listen(handle_);
+            sys_tcp_socket_operation::listen(handle_);
         }
         [[nodiscard]] sys_socket accept() const {
-            return sys_socket(sys_tcp_socket_options::accept(handle_));
+            return sys_socket(sys_tcp_socket_operation::accept(handle_));
         }
         template<class IP>
         void connect(const net_address<IP>& address) {
-            sys_tcp_socket_options::connect(handle_, address);
+            sys_tcp_socket_operation::connect(handle_, address);
         }
         size_t read(char* buffer, size_t size) const {
-            return sys_tcp_socket_options::read(handle_, buffer, size);
+            return sys_tcp_socket_operation::read(handle_, buffer, size);
         }
         size_t write(const char* buffer, size_t size) const {
-            return sys_tcp_socket_options::write(handle_, buffer, size);
+            return sys_tcp_socket_operation::write(handle_, buffer, size);
         }
         void set_socket_option(int level, int option_name, const void* option_value, socklen_t option_len) const {
-            sys_tcp_socket_options::set_socket_option(handle_, level, option_name, option_value, option_len);
+            sys_tcp_socket_operation::set_socket_option(handle_, level, option_name, option_value, option_len);
         }
 
 #elif __APPLE__
-        using socket_t = int64_t;
+        using socket_t = int;
         socket_t handle_;
         void set_default_socket_option() const {
-            sys_tcp_socket_options::default_socket_option(handle_);
+            sys_tcp_socket_operation::default_socket_option(handle_);
         }
 
     public:
         explicit sys_socket(socket_t handle) :
             handle_(handle) {
         }
+        sys_socket(const sys_socket&) = delete;
+        sys_socket& operator=(const sys_socket&) = delete;
         [[nodiscard]] socket_t raw_fd() const {
             return handle_;
         }
         sys_socket() :
-            handle_(sys_tcp_socket_options::create()) {
+            handle_(sys_tcp_socket_operation::create()) {
             set_default_socket_option();
         }
         sys_socket(sys_socket&& other) :
@@ -218,32 +220,31 @@ namespace coplus {
             return *this;
         }
         ~sys_socket() {
-            //if (handle_ != -1) sys_tcp_socket_options::close(handle_);
+            //if (handle_ != -1) sys_tcp_socket_operation::close(handle_);
         }
-        sys_socket(const sys_socket&) = delete;
-        sys_socket& operator=(const sys_socket&) = delete;
+
         template<class IP>
         void bind(const net_address<IP>& address) const {
-            sys_tcp_socket_options::bind(handle_, address);
+            sys_tcp_socket_operation::bind(handle_, address);
         }
         void listen() const {
-            sys_tcp_socket_options::listen(handle_);
+            sys_tcp_socket_operation::listen(handle_);
         }
         [[nodiscard]] sys_socket accept() const {
-            return sys_socket(sys_tcp_socket_options::accept(handle_));
+            return sys_socket(sys_tcp_socket_operation::accept(handle_));
         }
         template<class IP>
         void connect(const net_address<IP>& address) {
-            sys_tcp_socket_options::connect(handle_, address);
+            sys_tcp_socket_operation::connect(handle_, address);
         }
         size_t read(char* buffer, size_t size) const {
-            return sys_tcp_socket_options::read(handle_, buffer, size);
+            return sys_tcp_socket_operation::read(handle_, buffer, size);
         }
         size_t write(const char* buffer, size_t size) const {
-            return sys_tcp_socket_options::write(handle_, buffer, size);
+            return sys_tcp_socket_operation::write(handle_, buffer, size);
         }
         void set_socket_option(int level, int option_name, const void* option_value, socklen_t option_len) const {
-            sys_tcp_socket_options::set_socket_option(handle_, level, option_name, option_value, option_len);
+            sys_tcp_socket_operation::set_socket_option(handle_, level, option_name, option_value, option_len);
         }
 
 #endif

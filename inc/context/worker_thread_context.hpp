@@ -7,6 +7,7 @@
 #include "components/id_generator.hpp"
 #include "coroutine/task.hpp"
 #include "poll/poller.hpp"
+#include "timer.hpp"
 #include <atomic>
 #include <cstdint>
 #include <deque>
@@ -20,6 +21,7 @@ namespace coplus {
         std::unordered_map<int64_t, task<void>> suspend_tasks;
         std::list<task<void>> ready_task_queue;
         intptr_t current_task_id{0};
+        timer_type timer;
         void wake_task(int64_t task_id) {
             if (suspend_tasks.contains(task_id)) {
                 ready_task_queue.emplace_back(std::move(suspend_tasks[ task_id ]));
@@ -29,6 +31,13 @@ namespace coplus {
         }
 
     public:
+        worker_thread_context():
+            timer(poller.get_selector(),0)
+        {}
+        timer_type& get_timer() {
+            return timer;
+        }
+
         [[nodiscard]] intptr_t get_current_task_id() const {
             return current_task_id;
         }

@@ -41,21 +41,20 @@ namespace coplus::detail {
         void register_event_impl(handle_type file_handle, Interest interest, int data, void* udata) const {
             sys_event ev[ 4 ];
             int changes_index = 0;
-            auto sys_interest = (decltype(EVFILT_USER)) interest;
-            int flags = EV_CLEAR | EV_RECEIPT | EV_ADD;
-            if (sys_interest & Interest::READABLE) {
+            int flags =  EV_ADD | EV_CLEAR | EV_RECEIPT;
+            if (interest & Interest::READABLE) {
                 EV_SET(&ev[ changes_index ], file_handle, EVFILT_READ, flags, 0, data, udata);
                 changes_index += 1;
             }
-            if (sys_interest & Interest::WRITEABLE) {
+            if (interest & Interest::WRITEABLE) {
                 EV_SET(&ev[ changes_index ], file_handle, EVFILT_WRITE, flags, 0, data, udata);
                 changes_index += 1;
             }
-            if (sys_interest & Interest::AIO) {
+            if (interest & Interest::AIO) {
                 EV_SET(&ev[ changes_index ], file_handle, EVFILT_AIO, flags, 0, data, udata);
                 changes_index += 1;
             }
-            if (sys_interest & Interest::TIMER) {
+            if (interest & Interest::TIMER) {
                 EV_SET(&ev[ changes_index ], file_handle, EVFILT_TIMER, flags, 0, data, udata);
                 changes_index += 1;
             }
@@ -63,24 +62,23 @@ namespace coplus::detail {
         }
 
         void deregister_event_impl(handle_type file_handle, Interest interest) const {
-            auto flags = EV_DELETE | EV_RECEIPT;
+            int flags = EV_DELETE | EV_CLEAR;
             sys_event ev[ 4 ];
             int changes_index = 0;
-            auto sys_interest = (decltype(EVFILT_USER)) interest;
             if (interest & Interest::READABLE) {
-                EV_SET(&ev[ 0 ], file_handle, EVFILT_READ, flags, 0, 0, nullptr);
+                EV_SET(&ev[ changes_index ], file_handle, EVFILT_READ, flags, 0, 0, nullptr);
                 changes_index += 1;
             }
             if (interest & Interest::WRITEABLE) {
-                EV_SET(&ev[ changes_index ], file_handle, EVFILT_READ, flags, 0, 0, nullptr);
+                EV_SET(&ev[ changes_index ], file_handle, EVFILT_WRITE, flags, 0, 0, nullptr);
                 changes_index += 1;
             }
             if (interest & Interest::AIO) {
-                EV_SET(&ev[ changes_index ], file_handle, EVFILT_READ, flags, 0, 0, nullptr);
+                EV_SET(&ev[ changes_index ], file_handle, EVFILT_AIO, flags, 0, 0, nullptr);
                 changes_index += 1;
             }
             if (interest & Interest::TIMER) {
-                EV_SET(&ev[ changes_index ], file_handle, EVFILT_READ, flags, 0, 0, nullptr);
+                EV_SET(&ev[ changes_index ], file_handle, EVFILT_TIMER, flags, 0, 0, nullptr);
                 changes_index += 1;
             }
             kevent_register(ev, changes_index, ev, changes_index, nullptr);
@@ -89,7 +87,7 @@ namespace coplus::detail {
     public:
         kqueue_selector() :
             kqueue_fd(kqueue()) {
-            fcntl(kqueue_fd, F_SETFD, FD_CLOEXEC);
+            //fcntl(kqueue_fd, F_SETFD, FD_CLOEXEC);
         }
         ~kqueue_selector() {
             close(kqueue_fd);
