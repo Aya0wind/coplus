@@ -32,11 +32,13 @@ namespace cocpp {
         using handle_type = std::coroutine_handle<promise_type>;
         handle_type handle_;
         explicit Generator(handle_type handle) noexcept
-            : handle_(handle) {
+            :
+            handle_(handle) {
         }
         Generator(Generator const&) = delete;
         Generator(Generator&& other) noexcept
-            : handle_(other.handle_) {
+            :
+            handle_(other.handle_) {
             other.handle_ = nullptr;
         }
         //    Generator& operator=(Generator&& other){

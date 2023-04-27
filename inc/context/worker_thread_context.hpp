@@ -25,9 +25,7 @@ namespace coplus {
                 ready_task_queue.emplace_back(std::move(suspend_tasks[ task_id ]));
                 suspend_tasks.erase(task_id);
             }
-            else {
-                fmt::print("task_id: {} not found\n", task_id);
-            }
+            // 虚假事件或过期事件，无视
         }
 
     public:
@@ -60,7 +58,6 @@ namespace coplus {
             }
         }
 
-
         size_t all_task_size() {
             return ready_task_queue.size() + suspend_tasks.size();
         }
@@ -71,11 +68,6 @@ namespace coplus {
         size_t ready_task_size() {
             return ready_task_queue.size();
         }
-
-        [[nodiscard]] auto poller_sys_handle() const {
-            return poller.get_selector().get_handle();
-        }
-
         friend class event_loop;
     };
 

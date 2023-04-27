@@ -4,7 +4,7 @@
 
 #pragma once
 #include "../../traits.hpp"
-#include "poll/event.hpp"
+#include "poll/sys_event.hpp"
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <sys/types.h>
@@ -17,17 +17,17 @@ namespace coplus::detail {
         int epoll_event_register(handle_type fd, Interest interest, int op, void* udata, bool et_mode) const {
             epoll_data data;
             data.ptr = udata;
-            sys_event event{.events = 0, .data = data};
+            sys_event sys_event{.sys_events = 0, .data = data};
             if (interest & Interest::READABLE) {
-                event.events |= EPOLLIN;
+                sys_event.sys_events |= EPOLLIN;
             }
             if (interest & Interest::WRITEABLE) {
-                event.events |= EPOLLOUT;
+                sys_event.sys_events |= EPOLLOUT;
             }
             if (et_mode) {
-                event.events |= EPOLLET;
+                sys_event.sys_events |= EPOLLET;
             }
-            return epoll_ctl(this->epoll_fd, op, fd, &event);
+            return epoll_ctl(this->epoll_fd, op, fd, &sys_event);
         }
 
         [[nodiscard]] int get_handle_impl() const {
@@ -40,8 +40,8 @@ namespace coplus::detail {
         }
 
 
-        int select_impl(::std::vector<sys_event>& events, ::std::chrono::milliseconds timeout) const {
-            return epoll_wait(this->epoll_fd, events.data(), events.size(), timeout.count());
+        int select_impl(events& sys_events, ::std::chrono::milliseconds timeout) const {
+            return epoll_wait(this->epoll_fd, (struct epoll_event*) sys_events.data(), sys_events.size(), timeout.count());
         }
 
         void register_event_impl(handle_type file_handle, Interest interest, int data, void* udata) const {
@@ -55,7 +55,7 @@ namespace coplus::detail {
     public:
         epoll_selector() :
             epoll_fd(epoll_create(256)), wake_event_fd(eventfd(1, EFD_NONBLOCK)) {
-            //register eventfd event
+            //register eventfd sys_event
             epoll_event_register(wake_event_fd, Interest::READABLE, EPOLL_CTL_ADD, nullptr, false);
         }
     };

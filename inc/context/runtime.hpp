@@ -9,6 +9,7 @@
 #include <map>
 #include <queue>
 #include <thread>
+#include <vector>
 namespace coplus {
     class event_loop {
         std::atomic<bool>& stop_token;
@@ -20,7 +21,7 @@ namespace coplus {
         }
 
         void run_task_blocking(task<void> task) {
-            auto events_buffer = detail::sys_events(32);
+            auto events_buffer = std::vector<event>(32);
             while (!task.is_ready()) {
                 task.resume();
                 if (task.is_exception()) {
@@ -28,28 +29,17 @@ namespace coplus {
                 }
                 int event_size = current_worker_context.get_poller().poll_events(events_buffer, std::chrono::milliseconds(100));
                 if (event_size > 0) {
-                    // if ((events_buffer[ 0 ].flags & EV_ERROR) != 0 && events_buffer[ 0 ].data != 0) {
-                    //     fmt::print("error event:{}\n", strerror(events_buffer[ 0 ].data));
-                    //     return;
-                    // }
-                    // else if ((events_buffer[ 0 ].flags & EV_EOF) != 0) {
-                    //     return;
-                    // }
+                    wake_suspend_tasks(events_buffer, event_size);
                 }
             }
         }
 
         void operator()();
-        void wake_suspend_tasks(detail::sys_events& events, int event_size) {
+        static void wake_suspend_tasks(events& events, int event_size) {
             for (int i = 0; i < event_size; i++) {
-                auto task_id = (intptr_t) events[ i ].data.u64;
+                auto task_id = (intptr_t) events[ i ].get_task_id();
                 current_worker_context.wake_task(task_id);
             }
-        }
-
-        //only use at the same thread!!!
-        static void add_local_task(task<void> task) {
-            current_worker_context.add_ready_task(std::move(task));
         }
     };
     class co_runtime {
@@ -104,10 +94,10 @@ namespace coplus {
         };
         explicit co_runtime(size_t worker = 2) :
             worker_num(worker), main_loop(needStop) {
+            start_wokers();
         }
         static void run() {
             auto& runtime = get_global_runtime();
-            runtime.start_wokers();
             runtime.main_loop();
         }
         size_t get_worker_num() const {
@@ -121,7 +111,7 @@ namespace coplus {
 
         static void spawn(task<void> task) {
             auto& runtime = get_global_runtime();
-            auto target_event_loop = runtime.take_min_pressure_event_loop();
+            //auto target_event_loop = runtime.take_min_pressure_event_loop();
             //runtime.schedule_task_to_event_loop(std::move(task), std::move(target_event_loop));
             runtime.global_task_queue.push_back(std::move(task));
         }
@@ -163,17 +153,13 @@ namespace coplus {
 
     inline void event_loop::operator()() {
         {
-            auto events_buffer = detail::sys_events(8);
+            auto events_buffer = events(8);
             while (!stop_token.load(std::memory_order_relaxed)) {
-                //print_task_size();
-                //如果等待队列和就绪队列都是空的，代表线程没有任何任务可进行了
-                //print_thread_id();
                 //如果就绪队列为空，代表已经没有可以继续推进的任务了，再次尝试从全局任务队列中获取任务
                 if (current_worker_context.ready_task_queue.empty()) {
                     auto new_task = co_runtime::get_global_runtime().get_global_task_queue().take_front();
                     current_worker_context.add_ready_task(std::move(new_task));
                 }
-
                 //尝试推进所有就绪任务
                 current_worker_context.poll_all_task();
                 //轮询事件

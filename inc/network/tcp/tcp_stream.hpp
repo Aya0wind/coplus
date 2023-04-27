@@ -14,19 +14,19 @@ namespace coplus {
         const sys_socket& _socket;
         char* buffer;
         size_t size;
+        friend class detail::source_base<selector, socket_read_awaiter>;
+        void register_event_impl(selector& selector, intptr_t task_id) const {
+            selector.register_event(_socket.raw_fd(), detail::Interest::READABLE, 0, (void*) task_id);
+        }
+
+        void deregister_event_impl(selector& selector) const {
+            selector.register_event(_socket.raw_fd(), detail::Interest::READABLE, 0, nullptr);
+        }
 
     public:
         socket_read_awaiter(char* buffer, size_t size, const sys_socket& socket) :
             buffer(buffer), size(size), _socket(socket){};
         socket_read_awaiter(const socket_read_awaiter&) = delete;
-
-        void register_event(selector& selector, intptr_t task_id) const {
-            selector.register_event(_socket.raw_fd(), detail::Interest::READABLE, 0, (void*) task_id);
-        }
-
-        void deregister_event(selector& selector) const {
-            selector.register_event(_socket.raw_fd(), detail::Interest::READABLE, 0, nullptr);
-        }
 
         detail::handle_type get_handle() const {
             return _socket.raw_fd();
@@ -59,11 +59,11 @@ namespace coplus {
             buffer(buffer), size(size), _socket(socket){};
         socket_write_awaiter(const socket_write_awaiter&) = delete;
 
-        void register_event(selector& selector, intptr_t task_id) const {
+        void register_event_impl(selector& selector, intptr_t task_id) const {
             selector.register_event(_socket.raw_fd(), detail::Interest::WRITEABLE, 0, (void*) task_id);
         }
 
-        void deregister_event(selector& selector) const {
+        void deregister_event_impl(selector& selector) const {
             selector.register_event(_socket.raw_fd(), detail::Interest::WRITEABLE, 0, nullptr);
         }
 
@@ -127,11 +127,11 @@ namespace coplus {
         }
         socket_connect_awaiter(const socket_connect_awaiter&) = delete;
 
-        void register_event(selector& selector, intptr_t task_id) const {
+        void register_event_impl(selector& selector, intptr_t task_id) const {
             selector.register_event(_socket.raw_fd(), detail::Interest::READABLE, 0, (void*) task_id);
         }
 
-        void deregister_event(selector& selector, intptr_t task_id) const {
+        void deregister_event_impl(selector& selector, intptr_t task_id) const {
             selector.register_event(_socket.raw_fd(), detail::Interest::READABLE, 0, (void*) task_id);
         }
 
@@ -163,11 +163,11 @@ namespace coplus {
         }
         socket_listen_awaiter(const socket_listen_awaiter&) = delete;
 
-        void register_event(selector& selector, intptr_t task_id) const {
+        void register_event_impl(selector& selector, intptr_t task_id) const {
             selector.register_event(_socket.raw_fd(), detail::Interest::READABLE, 0, (void*) task_id);
         }
 
-        void deregister_event(selector& selector) const {
+        void deregister_event_impl(selector& selector) const {
             selector.register_event(_socket.raw_fd(), detail::Interest::READABLE, 0, nullptr);
         }
 

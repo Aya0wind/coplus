@@ -4,25 +4,21 @@
 
 #pragma once
 
-namespace coplus{
-    struct opoc_channel{
-
+namespace coplus {
+    struct opoc_channel {
     };
 
 
-    namespace detail{
+    namespace detail {
         template<class T>
-        struct opoc_channel_context{
+        struct opoc_channel_context {
             T data;
-
         }
-    }
+    }// namespace detail
     template<class T>
-    class opoc_channel_sender{
-
+    class opoc_channel_sender {
     };
     template<class T>
-    class opoc_channel_receiver{
-
+    class opoc_channel_receiver {
     };
-}
+}// namespace coplus

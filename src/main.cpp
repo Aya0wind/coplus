@@ -9,27 +9,26 @@
 #include <sstream>
 using namespace coplus;
 
-//task<> server_test()
-//{
-//    tcp_listener listener(net_address(ipv4("0.0.0.0"), 8082));
-//    char buffer[ 1024 ];
-//    fmt::print("point 1\n");
-//    while (true) {
-//        fmt::print("point 2\n");
-//        auto tcp_stream = co_await listener.accept();
-//        fmt::print("point 3\n");
-//        auto loop  =  [&buffer,tcp_stream = std::move(tcp_stream)] ()->task<>{
-//            fmt::print("point 4\n");
-//            while (true) {
-//                fmt::print("point 5\n");
-//                size_t size = co_await tcp_stream.read(buffer, sizeof buffer);
-//                co_await tcp_stream.write(buffer, size);
-//            }
-//        };
-//        current_worker_context.add_ready_task(std::move(co_runtime::make_task(loop)));
-//    }
-//}
-//
+task<> server_test()
+{
+    tcp_listener listener(net_address(ipv4("0.0.0.0"), 8082));
+    char buffer[ 1024 ];
+    fmt::print("point 1\n");
+    while (true) {
+        fmt::print("point 2\n");
+        auto tcp_stream = co_await listener.accept();
+        fmt::print("point 3\n");
+        co_runtime::spawn([&buffer,tcp_stream = std::move(tcp_stream)] ()->task<>{
+            fmt::print("point 4\n");
+            while (true) {
+                fmt::print("point 5\n");
+                size_t size = co_await tcp_stream.read(buffer, sizeof buffer);
+                co_await tcp_stream.write(buffer, size);
+            }
+        });
+    }
+}
+
 task<> client_test() {
     while (true) {
         co_await 1000_ms;

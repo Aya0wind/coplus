@@ -15,7 +15,8 @@ namespace coplus {
             using promise_type = promise<return_type>;
             co_handle<promise<return_type>> handle;
             explicit awaiter_base(std::coroutine_handle<promise_type> current) noexcept
-                : handle(current) {
+                :
+                handle(current) {
             }
 
             [[nodiscard]] inline bool await_ready() const noexcept {
@@ -37,7 +38,8 @@ namespace coplus {
             using promise_type = promise<>;
             co_handle<void> handle;
             explicit awaiter_base(std::coroutine_handle<promise_type> current) noexcept
-                : handle(current) {
+                :
+                handle(current) {
             }
 
             inline bool await_ready() const noexcept {

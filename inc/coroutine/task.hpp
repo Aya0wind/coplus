@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "default_awaiter.hpp"
 #include "components/id_generator.hpp"
+#include "default_awaiter.hpp"
 #include <cassert>
 #include <cstdint>
 #include <fmt/format.h>
@@ -21,15 +21,17 @@ namespace coplus {
     struct task {
         using promise_type = promise<return_type>;
 
-        explicit task(co_handle<promise_type> handle)
-            : handle(handle), id(id_generator::next_id()) {
+        explicit task(co_handle<promise_type> handle) :
+            handle(handle), id(id_generator::next_id()) {
         }
         task(task const&) = delete;
-        task()
-            : handle(nullptr), id(id_generator::next_id()) {
+        task() :
+            handle(nullptr), id(id_generator::next_id()) {
         }
         task(task&& other) noexcept
-            : handle(other.handle), id(other.id) {
+            :
+            handle(other.handle),
+            id(other.id) {
             other.handle = nullptr;
         }
         ~task() {
@@ -132,15 +134,17 @@ namespace coplus {
     struct task<void> {
         using promise_type = detail::promise<>;
         using co_handle = std::coroutine_handle<promise_type>;
-        task()
-            : handle(nullptr), id(id_generator::next_id()) {
+        task() :
+            handle(nullptr), id(id_generator::next_id()) {
         }
         task(task const&) = delete;
-        explicit task(co_handle handle)
-            : handle(handle), id(id_generator::next_id()) {
+        explicit task(co_handle handle) :
+            handle(handle), id(id_generator::next_id()) {
         }
         task(task&& other) noexcept
-            : handle(other.handle), id(other.id) {
+            :
+            handle(other.handle),
+            id(other.id) {
             other.handle = nullptr;
         }
         void resume() {

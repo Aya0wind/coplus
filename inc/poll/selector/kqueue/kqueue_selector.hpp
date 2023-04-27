@@ -31,11 +31,11 @@ namespace coplus::detail {
         }
 
 
-        int select_impl(::std::vector<sys_event>& events, ::std::chrono::milliseconds timeout) const {
+        int select_impl(events& events, ::std::chrono::milliseconds timeout) const {
             struct timespec sys_timeout {};
             sys_timeout.tv_sec = 0;
             sys_timeout.tv_nsec = (timeout.count() % 1000) * 1000000;
-            return kevent_register(nullptr, 0, events.data(), static_cast<int>(events.size()), nullptr);// 已经就绪的文件描述符数量
+            return kevent_register(nullptr, 0, (struct kevent*) events.data(), static_cast<int>(events.size()), nullptr);// 已经就绪的文件描述符数量
         }
 
         void register_event_impl(handle_type file_handle, Interest interest, int data, void* udata) const {
