@@ -4,6 +4,7 @@
 //
 #include "components/mpmc_channel.hpp"
 #include "context/worker_thread_context.hpp"
+#include "coroutine/promise.hpp"
 #include "coroutine/task.hpp"
 #include "poll/event.hpp"
 #include <map>
@@ -12,6 +13,16 @@
 #include <thread>
 #include <vector>
 namespace coplus {
+ namespace detail{
+     template<std::invocable Fn>
+     task<> make_task(Fn fn){
+         co_await std::invoke(std::move(fn));
+         co_return ;
+     }
+ }
+
+
+
     class event_loop {
         std::atomic<bool>& stop_token;
         std::atomic<size_t> task_size{0};
@@ -40,7 +51,6 @@ namespace coplus {
             for (int i = 0; i < event_size; i++) {
                 if(events[i].is_error()||events[i].is_read_closed()||events[i].is_write_closed()){
                     continue ;
-                    EVFILT_READ
                 }else if(events[i].is_read_closed()){
                     auto task_id = (intptr_t) events[ i ].get_task_id();
                     current_worker_context.wake_task(task_id);
@@ -129,13 +139,9 @@ namespace coplus {
         }
 
         template<std::invocable Fn>
-        static task<> make_task(Fn&& fn) {
-            co_return co_await std::invoke(std::forward<Fn>(fn));
-        }
-
-        template<std::invocable Fn>
-        static void spawn(Fn&& fn) {
-            spawn(make_task(fn));
+        static void spawn(Fn fn) {
+            auto task = detail::make_task(std::move(fn));
+            spawn(std::move(task));
         }
 
         inline static co_runtime& get_global_runtime() {

@@ -94,9 +94,6 @@ namespace coplus {
         tcp_stream(const tcp_stream&) = delete;
         tcp_stream& operator=(const tcp_stream&) = delete;
         tcp_stream(tcp_stream&& other) noexcept = default;
-        ~tcp_stream(){
-            fmt::print("tcp_stream destruct\n");
-        }
         tcp_stream& operator=(tcp_stream&& other) noexcept{
             std::swap(_socket, other._socket);
             return *this;

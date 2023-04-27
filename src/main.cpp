@@ -1,9 +1,11 @@
 
 #include "context/runtime.hpp"
 #include "context/worker_thread_context.hpp"
+#include "coroutine/task.hpp"
 #include "network/tcp/socket.hpp"
 #include "network/tcp/tcp_stream.hpp"
 #include "poll/poller.hpp"
+#include "time/delay.hpp"
 #include <atomic>
 #include <cstddef>
 #include <fmt/format.h>
@@ -11,34 +13,38 @@
 #include <sstream>
 using namespace coplus;
 
-task<> process(char* buffer,size_t size, tcp_stream stream) {
-    fmt::print("point 4\n");
-    fmt::print("socket:{}\n", stream.raw_fd());
-    while (true) {
-        fmt::print("point 5\n");
-        size_t size = co_await stream.read(buffer, sizeof buffer);
-        co_await stream.write(buffer, size);
-    }
-}
 
 
 task<> server_test() {
     tcp_listener listener(net_address(ipv4("0.0.0.0"), 8080));
     char buffer[ 1024 ];
-    fmt::print("point 1\n");
+    char* buffer_ptr = buffer;
     while (true) {
-        fmt::print("point 2\n");
-        co_runtime::print_global_task_queue_size();
         auto stream = co_await listener.accept();
-        fmt::print("point 3,{}\n", stream.raw_fd());
-        co_runtime::spawn(process(buffer, sizeof buffer, std::move(stream)));
-        fmt::print("stop");
+        co_runtime::spawn([buffer_ptr,connection(std::move(stream))]()->task<>{
+            while (true) {
+                try {
+                    size_t size = co_await connection.read(buffer_ptr, sizeof buffer);
+                    co_await connection.write(buffer_ptr, size);
+                }catch (std::exception& e){
+                    fmt::print("exception:{}", e.what());
+                    break;
+                }
+            }
+        });
+    }
+}
+
+
+task<> client_test() {
+    while (true){
+        co_await 1000_ms;
+        fmt::print("wait for 1000ms\n");
     }
 }
 
 int main() {
-    print_thread_id("main");
-    //co_runtime::spawn(client_test());
+    co_runtime::spawn(client_test());
     co_runtime::spawn(server_test());
     co_runtime::run();
 }

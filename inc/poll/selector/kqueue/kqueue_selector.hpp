@@ -41,7 +41,7 @@ namespace coplus::detail {
         void register_event_impl(handle_type file_handle, Interest interest, int data, void* udata) const {
             sys_event ev[ 4 ];
             int changes_index = 0;
-            int flags =  EV_ADD;
+            int flags =  EV_ADD | EV_CLEAR | EV_RECEIPT;
             if (interest & Interest::READABLE) {
                 EV_SET(&ev[ changes_index ], file_handle, EVFILT_READ, flags, 0, data, udata);
                 changes_index += 1;
@@ -62,7 +62,7 @@ namespace coplus::detail {
         }
 
         void deregister_event_impl(handle_type file_handle, Interest interest) const {
-            int flags = EV_DELETE;
+            int flags = EV_DELETE | EV_CLEAR;
             sys_event ev[ 4 ];
             int changes_index = 0;
             if (interest & Interest::READABLE) {
