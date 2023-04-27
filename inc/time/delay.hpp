@@ -5,6 +5,7 @@
 #pragma once
 #include "context/worker_thread_context.hpp"
 #include <chrono>
+#include <unistd.h>
 namespace coplus {
     struct DelayAwaiter {
         int expire_times;
@@ -33,9 +34,14 @@ namespace coplus {
         }
 
         void await_resume() {
-            //auto& timer = current_worker_context.get_timer();
-            //auto& selector = current_worker_context.get_poller().get_selector();
-            //timer.deregister_event(selector);
+            auto& timer = current_worker_context.get_timer();
+            auto& selector = current_worker_context.get_poller().get_selector();
+            // uint64_t count = 0;
+            // int readed = 1;
+            // while (readed > 0) {
+            //     readed = read(timer.get_handle(), (void*) &count, sizeof(count));
+            // }
+            timer.deregister_event(selector);
         }
 
     private:

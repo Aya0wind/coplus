@@ -13,14 +13,13 @@
 #include <thread>
 #include <vector>
 namespace coplus {
- namespace detail{
-     template<std::invocable Fn>
-     task<> make_task(Fn fn){
-         co_await std::invoke(std::move(fn));
-         co_return ;
-     }
- }
-
+    namespace detail {
+        template<std::invocable Fn>
+        task<> make_task(Fn fn) {
+            co_await std::invoke(std::move(fn));
+            co_return;
+        }
+    }// namespace detail
 
 
     class event_loop {
@@ -49,12 +48,14 @@ namespace coplus {
         void operator()();
         static void wake_suspend_tasks(events& events, int event_size) {
             for (int i = 0; i < event_size; i++) {
-                if(events[i].is_error()||events[i].is_read_closed()||events[i].is_write_closed()){
-                    continue ;
-                }else if(events[i].is_read_closed()){
+                if (events[ i ].is_error() || events[ i ].is_read_closed() || events[ i ].is_write_closed()) {
+                    continue;
+                }
+                else if (events[ i ].is_read_closed()) {
                     auto task_id = (intptr_t) events[ i ].get_task_id();
                     current_worker_context.wake_task(task_id);
-                }else{
+                }
+                else {
                     auto task_id = (intptr_t) events[ i ].get_task_id();
                     current_worker_context.wake_task(task_id);
                 }
@@ -174,7 +175,7 @@ namespace coplus {
                 //如果就绪队列为空，代表已经没有可以继续推进的任务了，再次尝试从全局任务队列中获取任务
                 if (current_worker_context.ready_task_queue.empty()) {
                     auto new_task = co_runtime::get_global_runtime().get_global_task_queue().try_take_front();
-                    if(new_task.has_value())
+                    if (new_task.has_value())
                         current_worker_context.add_ready_task(std::move(new_task.value()));
                 }
                 //尝试推进所有就绪任务
@@ -185,7 +186,8 @@ namespace coplus {
                     //轮询事件
                     int event_size = current_worker_context.poller.poll_events(events_buffer, std::chrono::milliseconds(50));
                     //唤醒监听事件的任务，重新从等待队列加入就绪队列
-                    wake_suspend_tasks(events_buffer, event_size);
+                    if (event_size > 0)
+                        wake_suspend_tasks(events_buffer, event_size);
                 }
             }
         }

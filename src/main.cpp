@@ -14,20 +14,19 @@
 using namespace coplus;
 
 
-
 task<> server_test() {
     tcp_listener listener(net_address(ipv4("0.0.0.0"), 8080));
     char buffer[ 1024 ];
     char* buffer_ptr = buffer;
     while (true) {
         auto stream = co_await listener.accept();
-        co_runtime::spawn([buffer_ptr,connection(std::move(stream))]()->task<>{
+        co_runtime::spawn([ buffer_ptr, connection(std::move(stream)) ]() -> task<> {
             while (true) {
                 try {
                     size_t size = co_await connection.read(buffer_ptr, sizeof buffer);
                     co_await connection.write(buffer_ptr, size);
-                }catch (std::exception& e){
-                    fmt::print("exception:{}", e.what());
+                } catch (std::exception& e) {
+                    fmt::print("exception:{}\n", e.what());
                     break;
                 }
             }
@@ -37,14 +36,14 @@ task<> server_test() {
 
 
 task<> client_test() {
-    while (true){
+    while (true) {
         co_await 1000_ms;
         fmt::print("wait for 1000ms\n");
     }
 }
 
 int main() {
-    co_runtime::spawn(client_test());
+    //co_runtime::spawn(client_test());
     co_runtime::spawn(server_test());
     co_runtime::run();
 }

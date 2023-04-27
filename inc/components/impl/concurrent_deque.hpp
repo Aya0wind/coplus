@@ -35,9 +35,9 @@ namespace coplus::detail {
 
         std::optional<T> try_take_front() {
             std::unique_lock<std::mutex> lock(mutex_);
-            if (queue_.empty()){
-                cond_.wait_for(lock,std::chrono::milliseconds(1));
-                if(queue_.empty()){
+            if (queue_.empty()) {
+                cond_.wait_for(lock, std::chrono::milliseconds(50));
+                if (queue_.empty()) {
                     return std::nullopt;
                 }
             }

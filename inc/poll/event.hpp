@@ -81,7 +81,7 @@ namespace coplus::detail {
             return sys_event.events == EPOLLHUP;
         }
         [[nodiscard]] bool is_write_closed_impl() const {
-            return false;
+            return sys_event.events == EPOLLHUP;
         }
         [[nodiscard]] bool is_priority_impl() const {
             return sys_event.events == EPOLLPRI;

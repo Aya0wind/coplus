@@ -4,6 +4,7 @@
 
 #pragma once
 #include "../../traits.hpp"
+#include "network/tcp/socket.hpp"
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <sys/types.h>
@@ -26,6 +27,9 @@ namespace coplus::detail {
             if (et_mode) {
                 sys_event.events |= EPOLLET;
             }
+            sys_event.events |= EPOLLONESHOT;
+            sys_event.events |= EPOLLRDHUP;
+            sys_event.events |= EPOLLHUP;
             return epoll_ctl(this->epoll_fd, op, fd, &sys_event);
         }
 
@@ -55,7 +59,11 @@ namespace coplus::detail {
         epoll_selector() :
             epoll_fd(epoll_create(256)), wake_event_fd(eventfd(1, EFD_NONBLOCK)) {
             //register eventfd sys_event
-            epoll_event_register(wake_event_fd, Interest::READABLE, EPOLL_CTL_ADD, nullptr, false);
+            //epoll_event_register(wake_event_fd, Interest::READABLE, EPOLL_CTL_ADD, nullptr, false);
+        }
+        ~epoll_selector() {
+            close(epoll_fd);
+            close(wake_event_fd);
         }
     };
 }// namespace coplus::detail
