@@ -4,7 +4,6 @@
 
 #pragma once
 #include "../../traits.hpp"
-#include "poll/sys_event.hpp"
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <sys/types.h>
@@ -17,15 +16,15 @@ namespace coplus::detail {
         int epoll_event_register(handle_type fd, Interest interest, int op, void* udata, bool et_mode) const {
             epoll_data data;
             data.ptr = udata;
-            sys_event sys_event{.sys_events = 0, .data = data};
+            sys_event sys_event{.events = 0, .data = data};
             if (interest & Interest::READABLE) {
-                sys_event.sys_events |= EPOLLIN;
+                sys_event.events |= EPOLLIN;
             }
             if (interest & Interest::WRITEABLE) {
-                sys_event.sys_events |= EPOLLOUT;
+                sys_event.events |= EPOLLOUT;
             }
             if (et_mode) {
-                sys_event.sys_events |= EPOLLET;
+                sys_event.events |= EPOLLET;
             }
             return epoll_ctl(this->epoll_fd, op, fd, &sys_event);
         }
@@ -41,7 +40,7 @@ namespace coplus::detail {
 
 
         int select_impl(events& sys_events, ::std::chrono::milliseconds timeout) const {
-            return epoll_wait(this->epoll_fd, (struct epoll_event*) sys_events.data(), sys_events.size(), timeout.count());
+            return epoll_wait(this->epoll_fd, (::epoll_event*) (sys_events.data()), sys_events.size(), timeout.count());
         }
 
         void register_event_impl(handle_type file_handle, Interest interest, int data, void* udata) const {

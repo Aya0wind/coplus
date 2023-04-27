@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <cstdint>
 namespace coplus::detail {
     enum Interest : uint8_t {
         READABLE = 1,
@@ -53,7 +54,52 @@ namespace coplus::detail {
 namespace coplus::detail {
     using sys_event = struct epoll_event;
     using sys_events = ::std::vector<sys_event>;
+    using handle_type = int;
+    class epoll_event : public event_base<epoll_event> {
+        detail::sys_event sys_event;
+        friend class event_base<epoll_event>;
+        [[nodiscard]] intptr_t get_task_id_impl() const {
+            return static_cast<intptr_t>(sys_event.data.u64);
+        }
+        [[nodiscard]] bool is_readable_impl() const {
+            return sys_event.events == EPOLLIN;
+        }
+        [[nodiscard]] bool is_writeable_impl() const {
+            return sys_event.events == EPOLLOUT;
+        }
+        [[nodiscard]] bool is_aio_impl() const {
+            return false;
+        }
+        [[nodiscard]] bool is_timer_impl() const {
+            return sys_event.events == EPOLLIN;
+        }
+        [[nodiscard]] bool is_error_impl() const {
+            return sys_event.events == EPOLLERR;
+        }
+
+        [[nodiscard]] bool is_read_closed_impl() const {
+            return sys_event.events == EPOLLHUP;
+        }
+        [[nodiscard]] bool is_write_closed_impl() const {
+            return false;
+        }
+        [[nodiscard]] bool is_priority_impl() const {
+            return sys_event.events == EPOLLPRI;
+        }
+
+    public:
+        explicit epoll_event(detail::sys_event e) :
+            sys_event(e){};
+        explicit operator detail::sys_event&() {
+            return reinterpret_cast<detail::sys_event&>(*this);
+        }
+        epoll_event() = default;
+    };
 }// namespace coplus::detail
+namespace coplus {
+    using event = detail::epoll_event;
+    using events = ::std::vector<event>;
+}// namespace coplus
 #elif __APPLE__
 #include <sys/event.h>
 #include <vector>
@@ -85,10 +131,10 @@ namespace coplus::detail {
         }
 
         [[nodiscard]] bool is_read_closed_impl() const {
-            return sys_event.filter == EVFILT_READ&&sys_event.flags == EV_EOF;
+            return sys_event.filter == EVFILT_READ && sys_event.flags == EV_EOF;
         }
         [[nodiscard]] bool is_write_closed_impl() const {
-            return sys_event.filter == EVFILT_WRITE&& sys_event.flags == EV_EOF;
+            return sys_event.filter == EVFILT_WRITE && sys_event.flags == EV_EOF;
         }
         [[nodiscard]] bool is_priority_impl() const {
             return false;

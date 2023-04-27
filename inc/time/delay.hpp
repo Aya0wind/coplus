@@ -3,8 +3,9 @@
 //
 
 #pragma once
+#include "context/worker_thread_context.hpp"
 #include <chrono>
-namespace coplus{
+namespace coplus {
     struct DelayAwaiter {
         int expire_times;
         template<class duration_type, class period>
@@ -15,9 +16,8 @@ namespace coplus{
         DelayAwaiter() = delete;
         DelayAwaiter(const DelayAwaiter&) = delete;
         template<class duration_type, class period>
-        DelayAwaiter(std::chrono::duration<duration_type, period>  timeout, bool repeat = false) :
-            expire_times(std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()),repeat(repeat)
-        {
+        DelayAwaiter(std::chrono::duration<duration_type, period> timeout, bool repeat = false) :
+            expire_times(std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()), repeat(repeat) {
         }
 
         bool await_ready() {
@@ -70,4 +70,4 @@ namespace coplus{
         return DelayAwaiter::delay(std::chrono::hours(d * 24));
     }
 
-}
+}// namespace coplus

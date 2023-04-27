@@ -19,20 +19,15 @@ namespace coplus {
         friend class detail::source_base<selector, epoll_timer>;
 
     public:
-        epoll_timer(std::chrono::milliseconds timeout, bool repeat) :
+        epoll_timer(selector& selector, int expire_time, bool repeat = false) :
             timer_fd(timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC)) {
             struct itimerspec new_value;
             // 第一次超时时间
-            new_value.it_value.tv_sec = timeout.count() / 1000;
-            new_value.it_value.tv_nsec = timeout.count() % 1000 * 1000000;
-            if (repeat) {
-                // 设置超时间隔
-                new_value.it_interval.tv_sec = timeout.count() / 1000;
-                new_value.it_interval.tv_nsec = timeout.count() % 1000 * 1000000;
-            }
+            new_value.it_value.tv_sec = expire_time / 1000;
+            new_value.it_value.tv_nsec = expire_time % 1000 * 1000000;
             // 设置第一次超时时间和超时间隔
-            if (timerfd_settime(timer_fd, TFD_TIMER_ABSTIME, &new_value, NULL) == -1)
-                throw std::runtime_error("timerfd_settime error");
+            //if (timerfd_settime(timer_fd, TFD_TIMER_ABSTIME, &new_value, NULL) == -1)
+            //throw std::runtime_error("timerfd_settime error");
         }
 
         detail::handle_type get_handle() const {

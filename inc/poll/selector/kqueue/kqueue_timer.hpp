@@ -6,7 +6,6 @@
 #include <cmath>
 #include <cstdint>
 #include <stdexcept>
-#include <sys/_types/_int64_t.h>
 namespace coplus {
 
     class kqueue_timer : public detail::source_base<selector, kqueue_timer> {
@@ -22,9 +21,8 @@ namespace coplus {
         friend class detail::source_base<selector, kqueue_timer>;
 
     public:
-
-        kqueue_timer(selector& selector,int expire_time, bool repeat= false) :
-            timer_fd(static_cast<int>(id_generator::next_id())),attached_selector(selector){
+        kqueue_timer(selector& selector, int expire_time, bool repeat = false) :
+            timer_fd(static_cast<int>(id_generator::next_id())), attached_selector(selector) {
         }
 
         void set_expire_timeout(int expire) {
@@ -35,6 +33,9 @@ namespace coplus {
             return timer_fd;
         }
         kqueue_timer(const kqueue_timer&) = delete;
-        kqueue_timer(kqueue_timer&& other) noexcept :timer_fd(other.timer_fd), attached_selector(other.attached_selector) {other.timer_fd = -1;}
+        kqueue_timer(kqueue_timer&& other) noexcept :
+            timer_fd(other.timer_fd), attached_selector(other.attached_selector) {
+            other.timer_fd = -1;
+        }
     };
 }// namespace coplus

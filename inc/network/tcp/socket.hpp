@@ -162,7 +162,8 @@ namespace coplus {
             return *this;
         }
         ~sys_socket() {
-            //if (handle_ != -1) sys_tcp_socket_operation::close(handle_);
+            if (handle_ != -1)
+                sys_tcp_socket_operation::close(handle_);
         }
         sys_socket(const sys_socket&) = delete;
         sys_socket& operator=(const sys_socket&) = delete;

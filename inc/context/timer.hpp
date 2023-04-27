@@ -23,7 +23,7 @@ namespace coplus {
     using timer_type = coplus::iocp_timer;
 }
 #elif __linux__
-#include "poll/selector/epoll/kqueue_timer.hpp"
+#include "poll/selector/epoll/epoll_timer.hpp"
 namespace coplus {
     using timer_type = coplus::epoll_timer;
 }
