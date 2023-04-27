@@ -5,6 +5,7 @@
 #pragma once
 #include "components/concurrent_list.hpp"
 #include "components/id_generator.hpp"
+#include "coroutine/promise.hpp"
 #include "coroutine/task.hpp"
 #include "poll/poller.hpp"
 #include "timer.hpp"
@@ -31,9 +32,9 @@ namespace coplus {
         }
 
     public:
-        worker_thread_context():
-            timer(poller.get_selector(),0)
-        {}
+        worker_thread_context() :
+            timer(poller.get_selector(), 0) {
+        }
         timer_type& get_timer() {
             return timer;
         }
@@ -51,7 +52,8 @@ namespace coplus {
 
         void poll_next_task() {
             auto task = std::move(ready_task_queue.front());
-            ready_task_queue.pop_front();
+            task<>()
+                    ready_task_queue.pop_front();
             current_task_id = task.get_id();
             task.resume();
             if (task.is_exception())
