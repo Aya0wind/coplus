@@ -211,7 +211,7 @@ namespace coplus {
             handle_(sys_tcp_socket_operation::create()) {
             set_default_socket_option();
         }
-        sys_socket(sys_socket&& other) :
+        sys_socket(sys_socket&& other)  noexcept :
             handle_(other.handle_) {
             other.handle_ = -1;
         }
@@ -221,7 +221,8 @@ namespace coplus {
             return *this;
         }
         ~sys_socket() {
-            //if (handle_ != -1) sys_tcp_socket_operation::close(handle_);
+//            if (handle_ != -1)
+//                sys_tcp_socket_operation::close(handle_);
         }
 
         template<class IP>

@@ -235,6 +235,6 @@ namespace coplus {
         inline task<> promise<>::get_return_object() noexcept {
             return task<>{std::coroutine_handle<promise<>>::from_promise(*this)};
         }
-    }// namespace detail
 
+    }// namespace detail
 }// namespace coplus

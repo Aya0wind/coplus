@@ -8,6 +8,7 @@
 #include "poll/poller.hpp"
 #include "poll/traits.hpp"
 #include "socket.hpp"
+#include <memory>
 namespace coplus {
 
     class socket_read_awaiter : public detail::source_base<selector, socket_read_awaiter> {
@@ -33,8 +34,7 @@ namespace coplus {
         }
 
         bool await_ready() {
-            //bool r = start_duration.count() + time.expire_time<=std::chrono::system_clock::now().time_since_epoch().count();
-            return true;
+            return false;
         }
 
         void await_suspend(auto handle) {
@@ -58,7 +58,6 @@ namespace coplus {
     public:
         socket_write_awaiter(const char* buffer, size_t size, const sys_socket& socket) :
             buffer(buffer), size(size), _socket(socket){};
-        socket_write_awaiter(const socket_write_awaiter&) = delete;
 
         void register_event_impl(selector& selector, intptr_t task_id) const {
             selector.register_event(_socket.raw_fd(), detail::Interest::WRITEABLE, 0, (void*) task_id);
@@ -81,6 +80,8 @@ namespace coplus {
         }
 
         auto await_resume() {
+            auto& poller = current_worker_context.get_poller();
+            poller.deregister_event(*this);
             return _socket.write(buffer, size);
         }
     };
@@ -93,7 +94,13 @@ namespace coplus {
         tcp_stream(const tcp_stream&) = delete;
         tcp_stream& operator=(const tcp_stream&) = delete;
         tcp_stream(tcp_stream&& other) noexcept = default;
-        tcp_stream& operator=(tcp_stream&& other) noexcept =default;
+        ~tcp_stream(){
+            fmt::print("tcp_stream destruct\n");
+        }
+        tcp_stream& operator=(tcp_stream&& other) noexcept{
+            std::swap(_socket, other._socket);
+            return *this;
+        }
 
         static auto connect(ipv4 ip, uint16_t port);
         [[nodiscard]] auto read(char* buffer, size_t size) const {
@@ -116,11 +123,17 @@ namespace coplus {
         net_address<IP> _address;
 
     public:
+        socket_connect_awaiter(const socket_connect_awaiter&) = delete;
+        socket_connect_awaiter(socket_connect_awaiter&&) = default;
+        socket_connect_awaiter& operator=(const socket_connect_awaiter&) = delete;
+        socket_connect_awaiter& operator=(socket_connect_awaiter&&other) {
+            std::swap(_socket, other._socket);
+            return *this;
+        }
         explicit socket_connect_awaiter(net_address<IP> address) :
             _address(std::move(address)) {
             _socket.bind(_address);
         }
-        socket_connect_awaiter(const socket_connect_awaiter&) = delete;
 
         void register_event_impl(selector& selector, intptr_t task_id) const {
             selector.register_event(_socket.raw_fd(), detail::Interest::READABLE, 0, (void*) task_id);
@@ -151,7 +164,6 @@ namespace coplus {
 
     class socket_listen_awaiter : public detail::source_base<selector, socket_listen_awaiter> {
         sys_socket& _socket;
-
     public:
         explicit socket_listen_awaiter(sys_socket& socket) :
             _socket(socket) {
@@ -179,7 +191,7 @@ namespace coplus {
                     .register_event(*this, current_worker_context.get_current_task_id());
         }
         tcp_stream await_resume() {
-            return {std::move(_socket.accept())};
+            return {_socket.accept()};
         }
     };
 
@@ -195,8 +207,11 @@ namespace coplus {
         ~tcp_listener() = default;
         tcp_listener(const tcp_listener&) = delete;
         tcp_listener& operator=(const tcp_listener&) = delete;
-        tcp_listener(tcp_listener&&) = delete;
-        tcp_listener& operator=(tcp_listener&&) = delete;
+        tcp_listener(tcp_listener&&) = default;
+        tcp_listener& operator=(tcp_listener&& other){
+            std::swap(_socket, other._socket);
+            return *this;
+        }
         [[nodiscard]] auto accept();
         friend class socket_listen_awaiter;
     };

@@ -38,8 +38,16 @@ namespace coplus {
         void operator()();
         static void wake_suspend_tasks(events& events, int event_size) {
             for (int i = 0; i < event_size; i++) {
-                auto task_id = (intptr_t) events[ i ].get_task_id();
-                current_worker_context.wake_task(task_id);
+                if(events[i].is_error()||events[i].is_read_closed()||events[i].is_write_closed()){
+                    continue ;
+                    EVFILT_READ
+                }else if(events[i].is_read_closed()){
+                    auto task_id = (intptr_t) events[ i ].get_task_id();
+                    current_worker_context.wake_task(task_id);
+                }else{
+                    auto task_id = (intptr_t) events[ i ].get_task_id();
+                    current_worker_context.wake_task(task_id);
+                }
             }
         }
     };
@@ -122,14 +130,12 @@ namespace coplus {
 
         template<std::invocable Fn>
         static task<> make_task(Fn&& fn) {
-            std::invoke(std::forward<Fn>(fn));
-            co_return;
+            co_return co_await std::invoke(std::forward<Fn>(fn));
         }
 
         template<std::invocable Fn>
         static void spawn(Fn&& fn) {
-            auto task = fn();
-            spawn(std::move(task));
+            spawn(make_task(fn));
         }
 
         inline static co_runtime& get_global_runtime() {
@@ -161,19 +167,17 @@ namespace coplus {
             while (!stop_token.load(std::memory_order_relaxed)) {
                 //如果就绪队列为空，代表已经没有可以继续推进的任务了，再次尝试从全局任务队列中获取任务
                 if (current_worker_context.ready_task_queue.empty()) {
-                    auto new_task = co_runtime::get_global_runtime().get_global_task_queue().take_front();
-                    current_worker_context.add_ready_task(std::move(new_task));
+                    auto new_task = co_runtime::get_global_runtime().get_global_task_queue().try_take_front();
+                    if(new_task.has_value())
+                        current_worker_context.add_ready_task(std::move(new_task.value()));
                 }
                 //尝试推进所有就绪任务
                 current_worker_context.poll_all_task();
                 std::stringstream ss;
                 ss << std::this_thread::get_id();
-
-                fmt::print("thread:{},ready_task_queue size: {}\n", ss.str(), current_worker_context.ready_task_queue.size());
-                fmt::print("thread:{},suspend_task_queue size: {}\n", ss.str(), current_worker_context.suspend_tasks.size());
                 if (!current_worker_context.suspend_tasks.empty()) {
                     //轮询事件
-                    int event_size = current_worker_context.poller.poll_events(events_buffer, std::chrono::milliseconds(100));
+                    int event_size = current_worker_context.poller.poll_events(events_buffer, std::chrono::milliseconds(50));
                     //唤醒监听事件的任务，重新从等待队列加入就绪队列
                     wake_suspend_tasks(events_buffer, event_size);
                 }

@@ -35,13 +35,13 @@ namespace coplus::detail {
             struct timespec sys_timeout {};
             sys_timeout.tv_sec = 0;
             sys_timeout.tv_nsec = (timeout.count() % 1000) * 1000000;
-            return kevent_register(nullptr, 0, (struct kevent*) events.data(), static_cast<int>(events.size()), nullptr);// 已经就绪的文件描述符数量
+            return kevent_register(nullptr, 0, (struct kevent*) events.data(), static_cast<int>(events.size()), &sys_timeout);// 已经就绪的文件描述符数量
         }
 
         void register_event_impl(handle_type file_handle, Interest interest, int data, void* udata) const {
             sys_event ev[ 4 ];
             int changes_index = 0;
-            int flags =  EV_ADD | EV_CLEAR | EV_RECEIPT;
+            int flags =  EV_ADD;
             if (interest & Interest::READABLE) {
                 EV_SET(&ev[ changes_index ], file_handle, EVFILT_READ, flags, 0, data, udata);
                 changes_index += 1;
@@ -62,7 +62,7 @@ namespace coplus::detail {
         }
 
         void deregister_event_impl(handle_type file_handle, Interest interest) const {
-            int flags = EV_DELETE | EV_CLEAR;
+            int flags = EV_DELETE;
             sys_event ev[ 4 ];
             int changes_index = 0;
             if (interest & Interest::READABLE) {

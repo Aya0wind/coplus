@@ -5,9 +5,22 @@
 #include "network/tcp/tcp_stream.hpp"
 #include "poll/poller.hpp"
 #include <atomic>
+#include <cstddef>
 #include <fmt/format.h>
+#include <functional>
 #include <sstream>
 using namespace coplus;
+
+task<> process(char* buffer,size_t size, tcp_stream stream) {
+    fmt::print("point 4\n");
+    fmt::print("socket:{}\n", stream.raw_fd());
+    while (true) {
+        fmt::print("point 5\n");
+        size_t size = co_await stream.read(buffer, sizeof buffer);
+        co_await stream.write(buffer, size);
+    }
+}
+
 
 task<> server_test() {
     tcp_listener listener(net_address(ipv4("0.0.0.0"), 8080));
@@ -18,16 +31,7 @@ task<> server_test() {
         co_runtime::print_global_task_queue_size();
         auto stream = co_await listener.accept();
         fmt::print("point 3,{}\n", stream.raw_fd());
-        co_runtime::spawn([ &buffer, connection = stream.raw_fd() ]() -> task<> {
-            fmt::print("point 4\n");
-            fmt::print("socket:{}\n", connection);
-            auto con = tcp_stream(sys_socket(connection));
-            while (true) {
-                fmt::print("point 5\n");
-                size_t size = co_await con.read(buffer, sizeof buffer);
-                co_await con.write(buffer, size);
-            }
-        });
+        co_runtime::spawn(process(buffer, sizeof buffer, std::move(stream)));
         fmt::print("stop");
     }
 }
