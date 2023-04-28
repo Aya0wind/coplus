@@ -9,7 +9,7 @@
 #include <chrono>
 #include <unistd.h>
 namespace coplus {
-    struct DelayAwaiter{
+    struct DelayAwaiter {
         int expire_times;
         template<class duration_type, class period>
         static DelayAwaiter delay(std::chrono::duration<duration_type, period> duration) {
@@ -21,8 +21,7 @@ namespace coplus {
         template<class duration_type, class period>
         DelayAwaiter(std::chrono::duration<duration_type, period> timeout, bool repeat = false) :
             expire_times(std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()),
-            repeat(repeat)
-        {
+            repeat(repeat) {
         }
 
         bool await_ready() {

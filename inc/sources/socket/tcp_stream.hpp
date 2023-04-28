@@ -83,7 +83,7 @@ namespace coplus {
             current_index = write_result;
             return write_result == size;
         }
-        detail::handle_type get_handle() const {
+        [[nodiscard]] detail::handle_type get_handle() const {
             return _socket.raw_fd();
         }
         void await_suspend(auto handle) {
@@ -139,7 +139,7 @@ namespace coplus {
 
     public:
         socket_connect_awaiter(const socket_connect_awaiter&) = delete;
-        socket_connect_awaiter(socket_connect_awaiter&&) = default;
+        socket_connect_awaiter(socket_connect_awaiter&&)  noexcept = default;
         socket_connect_awaiter& operator=(const socket_connect_awaiter&) = delete;
         socket_connect_awaiter& operator=(socket_connect_awaiter&& other) noexcept {
             std::swap(_socket, other._socket);
@@ -198,7 +198,7 @@ namespace coplus {
             return false;
         }
 
-        detail::handle_type get_handle() const {
+        [[nodiscard]] detail::handle_type get_handle() const {
             return _socket.raw_fd();
         }
         void await_suspend(auto handle) {
@@ -232,7 +232,7 @@ namespace coplus {
         ~tcp_listener() = default;
         tcp_listener(const tcp_listener&) = delete;
         tcp_listener& operator=(const tcp_listener&) = delete;
-        tcp_listener(tcp_listener&&) = default;
+        tcp_listener(tcp_listener&&)  noexcept = default;
         tcp_listener& operator=(tcp_listener&& other) noexcept {
             std::swap(_socket, other._socket);
             return *this;

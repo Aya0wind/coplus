@@ -9,6 +9,7 @@ namespace coplus {
 
     class ipv6 {
         uint32_t ip_;
+
     public:
         explicit ipv6(const std::string& ip) {
             ip_ = inet_addr(ip.data());

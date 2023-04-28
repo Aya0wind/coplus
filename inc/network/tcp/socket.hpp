@@ -135,9 +135,28 @@ namespace coplus {
             addr.sin_addr.s_addr = address.ip().bin();
             return ::connect(socket, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
         }
+
+        [[gnu::always_inline]] static int read_to_end(socket_t socket, char* buffer, size_t size) {
+            int read_result = read(socket, buffer, size);
+            if (read_result > 0) {
+                int indexer = read_result;
+                while (indexer < size) {
+                    read_result = read(socket, buffer + indexer, size - indexer);
+                    if (read_result > 0) {
+                        indexer += read_result;
+                    }
+                    else {
+                        return indexer;
+                    }
+                }
+            }
+            return read_result;
+        }
+
         [[gnu::always_inline]] static int read(socket_t socket, char* buffer, size_t size) {
             return ::read(socket, buffer, size);
         }
+
         [[gnu::always_inline]] static int write(socket_t socket, const char* buffer, size_t size) {
             return ::write(socket, buffer, size);
         }
@@ -227,12 +246,14 @@ namespace coplus {
         using socket_t = int;
         socket_t handle_;
         void set_default_socket_option() const {
+            fcntl(handle_, F_SETFL, fcntl(handle_, F_GETFL) | O_NONBLOCK);
             sys_tcp_socket_operation::default_socket_option(handle_);
         }
 
     public:
         explicit sys_socket(socket_t handle) :
             handle_(handle) {
+            set_default_socket_option();
         }
         sys_socket(const sys_socket&) = delete;
         sys_socket& operator=(const sys_socket&) = delete;
@@ -253,8 +274,8 @@ namespace coplus {
             return *this;
         }
         ~sys_socket() {
-            //            if (handle_ != -1)
-            //                sys_tcp_socket_operation::close(handle_);
+            if (handle_ != -1)
+                sys_tcp_socket_operation::close(handle_);
         }
 
         template<class IP>
@@ -284,7 +305,9 @@ namespace coplus {
         void set_socket_option(int level, int option_name, const void* option_value, socklen_t option_len) const {
             sys_tcp_socket_operation::set_socket_option(handle_, level, option_name, option_value, option_len);
         }
-
+        int read_to_end(char* buffer, size_t size) const {
+            return sys_tcp_socket_operation::read_to_end(this->handle_, buffer, size);
+        }
 #endif
     };
 }// namespace coplus

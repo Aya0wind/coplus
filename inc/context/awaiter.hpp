@@ -6,6 +6,5 @@
 
 #include "poll/event.hpp"
 template<class T>
-class event_awaiter{
-
+class event_awaiter {
 };

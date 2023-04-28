@@ -23,8 +23,8 @@ namespace coplus {
         friend class detail::source_base<selector, kqueue_timer>;
 
     public:
-        kqueue_timer(selector& selector,token_type token, bool repeat = false) :
-            timer_fd(static_cast<int>(id_generator::next_id())), attached_selector(selector),token(token) {
+        kqueue_timer(selector& selector, token_type token, bool repeat = false) :
+            timer_fd(static_cast<int>(id_generator::next_id())), attached_selector(selector), token(token) {
         }
 
         void set_expire_timeout(int expire) {
@@ -40,10 +40,10 @@ namespace coplus {
         }
         kqueue_timer(const kqueue_timer&) = delete;
         kqueue_timer(kqueue_timer&& other) noexcept :
-            timer_fd(other.timer_fd), attached_selector(other.attached_selector),token(other.token) {
+            timer_fd(other.timer_fd), attached_selector(other.attached_selector), token(other.token) {
             other.timer_fd = -1;
         }
-        ~kqueue_timer(){
+        ~kqueue_timer() {
             deregister_event(attached_selector);
         }
     };

@@ -19,8 +19,12 @@ namespace coplus {
         ipv4(int p1, int p2, int p3, int p4) {
             ip_ = (p1 << 24) | (p2 << 16) | (p3 << 8) | p4;
         }
-        explicit ipv4(uint32_t bin):ip_(bin) {}
-        ipv4(const ipv4& other) :ip_(other.ip_) {}
+        explicit ipv4(uint32_t bin) :
+            ip_(bin) {
+        }
+        ipv4(const ipv4& other) :
+            ip_(other.ip_) {
+        }
         ipv4& operator=(const ipv4& other) noexcept = default;
         ipv4(ipv4&& other) noexcept = default;
         ipv4& operator=(ipv4&& other) noexcept = default;
@@ -62,7 +66,7 @@ namespace coplus {
         net_address(int p1, int p2, int p3, int p4, uint16_t port) :
             ip_(p1, p2, p3, p4), port_(port) {
         }
-        static net_address from_raw(sockaddr_in* addr){
+        static net_address from_raw(sockaddr_in* addr) {
             return net_address(addr->sin_addr.s_addr, addr->sin_port);
         }
         void set_port(uint16_t port) {
@@ -92,7 +96,7 @@ namespace coplus {
         net_address(int p1, int p2, int p3, int p4, uint16_t port) :
             ip_(p1, p2, p3, p4), port_(port) {
         }
-        static net_address<ipv4> from_raw(sockaddr_in* addr){
+        static net_address<ipv4> from_raw(sockaddr_in* addr) {
             return net_address<ipv4>(ipv4(addr->sin_addr.s_addr), addr->sin_port);
         }
         void set_port(uint16_t port) {

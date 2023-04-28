@@ -4,7 +4,7 @@
 
 #pragma once
 #include <cstdint>
-namespace coplus{
+namespace coplus {
     enum Interest : uint8_t {
         READABLE = 1,
         WRITEABLE = 2,
@@ -46,8 +46,8 @@ namespace coplus{
                 return static_cast<const E*>(this)->is_priority_impl();
             }
         };
-    }
-}// namespace coplus::detail
+    }// namespace detail
+}// namespace coplus
 
 
 #ifdef __linux__
