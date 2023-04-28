@@ -62,6 +62,8 @@ namespace coplus {
 
         [[gnu::always_inline]] static int read_to_end(socket_t socket, char* buffer, size_t size) {
             int read_result = read(socket, buffer, size);
+            if(read_result==-1&&errno==EAGAIN)
+                return 0;
             if (read_result > 0) {
                 int indexer = read_result;
                 while (indexer < size) {
@@ -69,10 +71,16 @@ namespace coplus {
                     if (read_result > 0) {
                         indexer += read_result;
                     }
-                    else {
+                    if(read_result==0)
                         return indexer;
+                    if(read_result==-1){
+                        if(errno==EAGAIN||errno==EWOULDBLOCK)
+                            return indexer;
+                        else
+                            return -1;
                     }
                 }
+                return indexer;
             }
             return read_result;
         }
@@ -138,6 +146,8 @@ namespace coplus {
 
         [[gnu::always_inline]] static int read_to_end(socket_t socket, char* buffer, size_t size) {
             int read_result = read(socket, buffer, size);
+            if(read_result==-1&&errno==EAGAIN)
+                return 0;
             if (read_result > 0) {
                 int indexer = read_result;
                 while (indexer < size) {
@@ -145,10 +155,16 @@ namespace coplus {
                     if (read_result > 0) {
                         indexer += read_result;
                     }
-                    else {
+                    if(read_result==0)
                         return indexer;
+                    if(read_result==-1){
+                        if(errno==EAGAIN||errno==EWOULDBLOCK)
+                            return indexer;
+                        else
+                            return -1;
                     }
                 }
+                return indexer;
             }
             return read_result;
         }
@@ -300,13 +316,19 @@ namespace coplus {
             return sys_tcp_socket_operation::read(handle_, buffer, size);
         }
         int write(const char* buffer, size_t size) const {
-            return sys_tcp_socket_operation::write(handle_, buffer, size);
+            int write_result = sys_tcp_socket_operation::write(handle_, buffer, size);
+            if (write_result < 0)
+                throw std::runtime_error(std::strerror(errno));
+            return write_result;
         }
         void set_socket_option(int level, int option_name, const void* option_value, socklen_t option_len) const {
             sys_tcp_socket_operation::set_socket_option(handle_, level, option_name, option_value, option_len);
         }
         int read_to_end(char* buffer, size_t size) const {
-            return sys_tcp_socket_operation::read_to_end(this->handle_, buffer, size);
+            int read_result = sys_tcp_socket_operation::read_to_end(handle_, buffer, size);
+            if (read_result < 0)
+                throw std::runtime_error(std::string("read error:")+std::strerror(errno));
+            return read_result;
         }
 #endif
     };

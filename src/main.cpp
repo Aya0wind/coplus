@@ -12,17 +12,18 @@ task<> server_test() {
     while (true) {
         auto stream = co_await listener.accept();
         co_runtime::spawn([ connection(std::move(stream)) ]() -> task<> {
-            char buffer[ 1024 ];
+            char buffer[ 4096 ];
             while (true) {
                 try {
                     size_t size = co_await connection.read(buffer, sizeof buffer);
+                    //std::cout<<"read size:"<<size<<"\n";
                     if (size == 0) {
                         break;
                     }
                     co_await connection.write(buffer, size);
+                    //std::cout<<"write size:"<<size<<"\n";
                 } catch (std::exception& e) {
-                    std::cout << "exception:{}\n"
-                              << e.what();
+                    std::cout << "exception:"<< e.what()<<'\n';
                     break;
                 }
             }

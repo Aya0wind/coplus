@@ -24,13 +24,14 @@ namespace coplus {
         const sys_socket& _socket;
         char* buffer;
         size_t size;
+        bool already_read = false;
         friend class detail::source_base<selector, socket_read_awaiter>;
         void register_event_impl(selector& selector, intptr_t task_id) const {
             selector.register_event(_socket.raw_fd(), Interest::READABLE, 0, (void*) task_id);
         }
 
         void deregister_event_impl(selector& selector) const {
-            selector.register_event(_socket.raw_fd(), Interest::READABLE, 0, nullptr);
+            //selector.deregister_event(_socket.raw_fd(), Interest::READABLE);
         }
 
     public:
@@ -44,7 +45,10 @@ namespace coplus {
 
         bool await_ready() {
             int read_result = _socket.read_to_end(buffer, size);
-            return read_result >= 0;
+            already_read = read_result>0;
+            if(already_read)
+                size = read_result;
+            return already_read;
         }
 
         void await_suspend(co_handle<void> handle) {
@@ -54,9 +58,13 @@ namespace coplus {
         }
 
         auto await_resume() {
+            if(already_read){
+                return static_cast<int>(size);
+            }
             auto& poller = current_worker_context.get_poller();
             poller.deregister_event(*this);
-            return _socket.read_to_end(buffer, size);
+            int read_result = _socket.read_to_end(buffer, size);
+            return read_result;
         }
     };
     template<class IP>
@@ -75,7 +83,7 @@ namespace coplus {
         }
 
         void deregister_event_impl(selector& selector) const {
-            selector.register_event(_socket.raw_fd(), Interest::WRITEABLE, 0, nullptr);
+            //selector.deregister_event(_socket.raw_fd(), Interest::WRITEABLE);
         }
 
         bool await_ready() {
@@ -155,7 +163,7 @@ namespace coplus {
         }
 
         void deregister_event_impl(selector& selector, intptr_t task_id) const {
-            selector.register_event(_socket.raw_fd(), Interest::READABLE, 0, (void*) task_id);
+            //selector.deregister_event(_socket.raw_fd(), Interest::READABLE);
         }
 
         bool await_ready() {
@@ -191,7 +199,7 @@ namespace coplus {
         }
 
         void deregister_event_impl(selector& selector) const {
-            selector.register_event(_socket.raw_fd(), Interest::READABLE, 0, nullptr);
+            //selector.deregister_event(_socket.raw_fd(), Interest::READABLE);
         }
 
         bool await_ready() {
@@ -212,7 +220,7 @@ namespace coplus {
             auto& poller = current_worker_context.get_poller();
             poller.deregister_event(*this);
             if (new_socket.raw_fd() == -1)
-                throw std::runtime_error("accept error");
+                throw std::runtime_error(std::string ("accept error:")+strerror(errno));
             return tcp_stream<IP>(std::move(new_socket), std::move(addr));
         }
     };

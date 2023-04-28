@@ -100,7 +100,7 @@ namespace coplus {
         mpmc_channel<task<>>& get_global_task_queue() {
             return global_task_queue;
         };
-        explicit co_runtime(size_t worker = 2) :
+        explicit co_runtime(size_t worker = std::thread::hardware_concurrency()) :
             worker_num(worker), main_loop(needStop) {
             start_workers();
         }
