@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "poll/event.hpp"
 #include "poll/poller.hpp"
 #include <cerrno>
 #include <chrono>
@@ -40,7 +41,9 @@ namespace coplus {
         detail::handle_type get_handle() const {
             return timer_fd;
         }
-
+        token_type get_token() const {
+            return timer_fd;
+        }
         ~epoll_timer() {
             close(timer_fd);
         }

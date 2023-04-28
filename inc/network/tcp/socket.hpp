@@ -11,7 +11,6 @@
 #include <netinet/in.h>
 #include <stdexcept>
 #include <string>
-#include <sys/_types/_socklen_t.h>
 #include <tuple>
 
 namespace coplus {
@@ -45,11 +44,11 @@ namespace coplus {
         [[gnu::always_inline]] static int listen(socket_t socket) {
             return ::listen(socket, SOMAXCONN);
         }
-        [[gnu::always_inline]] static std::tuple<socket_t ,sockaddr,socklen_t> accept(socket_t socket) {
+        [[gnu::always_inline]] static std::tuple<socket_t, sockaddr, socklen_t> accept(socket_t socket) {
             sockaddr addr{};
             socklen_t len = sizeof(addr);
             socket_t new_socket = ::accept(socket, &addr, &len);
-            return {new_socket,addr,len};
+            return {new_socket, addr, len};
         }
 
         template<class IP>
@@ -60,6 +59,24 @@ namespace coplus {
             addr.sin_addr.s_addr = address.ip().bin();
             return ::connect(socket, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
         }
+
+        [[gnu::always_inline]] static int read_to_end(socket_t socket, char* buffer, size_t size) {
+            int read_result = read(socket, buffer, size);
+            if (read_result > 0) {
+                int indexer = read_result;
+                while (indexer < size) {
+                    read_result = read(socket, buffer + indexer, size - indexer);
+                    if (read_result > 0) {
+                        indexer += read_result;
+                    }
+                    else {
+                        return indexer;
+                    }
+                }
+            }
+            return read_result;
+        }
+
         [[gnu::always_inline]] static int read(socket_t socket, char* buffer, size_t size) {
             return ::read(socket, buffer, size);
         }
@@ -73,7 +90,7 @@ namespace coplus {
 
         static void default_socket_option(socket_t socket) {
             int opt = 1;
-            set_socket_option(socket, SOL_SOCKET, SO_NOSIGPIPE, (void*) (&opt), sizeof(opt));
+            set_socket_option(socket, SOL_SOCKET, 0, (void*) (&opt), sizeof(opt));
         }
     };
 #elif __APPLE__
@@ -103,11 +120,11 @@ namespace coplus {
         [[gnu::always_inline]] static int listen(socket_t socket) {
             return ::listen(socket, SOMAXCONN);
         }
-        [[gnu::always_inline]] static std::tuple<socket_t ,sockaddr,socklen_t> accept(socket_t socket) {
+        [[gnu::always_inline]] static std::tuple<socket_t, sockaddr, socklen_t> accept(socket_t socket) {
             sockaddr addr{};
             socklen_t len = sizeof(addr);
             socket_t new_socket = ::accept(socket, &addr, &len);
-            return {new_socket,addr,len};
+            return {new_socket, addr, len};
         }
 
         template<class IP>
@@ -143,12 +160,14 @@ namespace coplus {
         using socket_t = int;
         socket_t handle_;
         void set_default_socket_option() const {
+            fcntl(handle_, F_SETFL, fcntl(handle_, F_GETFL) | O_NONBLOCK);
             sys_tcp_socket_operation::default_socket_option(handle_);
         }
 
     public:
         explicit sys_socket(socket_t handle) :
             handle_(handle) {
+            set_default_socket_option();
         }
         sys_socket(const sys_socket&) = delete;
         sys_socket& operator=(const sys_socket&) = delete;
@@ -159,7 +178,7 @@ namespace coplus {
             handle_(sys_tcp_socket_operation::create()) {
             set_default_socket_option();
         }
-        sys_socket(sys_socket&& other)  noexcept :
+        sys_socket(sys_socket&& other) noexcept :
             handle_(other.handle_) {
             other.handle_ = -1;
         }
@@ -169,8 +188,8 @@ namespace coplus {
             return *this;
         }
         ~sys_socket() {
-            //            if (handle_ != -1)
-            //                sys_tcp_socket_operation::close(handle_);
+            if (handle_ != -1)
+                sys_tcp_socket_operation::close(handle_);
         }
 
         template<class IP>
@@ -181,9 +200,9 @@ namespace coplus {
             sys_tcp_socket_operation::listen(handle_);
         }
         template<class IP>
-        [[nodiscard]] std::tuple<sys_socket,net_address<IP>> accept() const {
-            auto [raw_fd,addr,_ ] = sys_tcp_socket_operation::accept(handle_);
-            return  sys_socket(raw_fd,net_address<IP>::from_raw((sockaddr_in*)&addr));
+        [[nodiscard]] std::tuple<sys_socket, net_address<IP>> accept() const {
+            auto [ raw_fd, addr, _ ] = sys_tcp_socket_operation::accept(handle_);
+            return {sys_socket(raw_fd), net_address<IP>::from_raw((sockaddr_in*) &addr)};
         }
         template<class IP>
         void connect(const net_address<IP>& address) {
@@ -197,6 +216,10 @@ namespace coplus {
         }
         void set_socket_option(int level, int option_name, const void* option_value, socklen_t option_len) const {
             sys_tcp_socket_operation::set_socket_option(handle_, level, option_name, option_value, option_len);
+        }
+
+        int read_to_end(char* buffer, size_t size) const {
+            return sys_tcp_socket_operation::read_to_end(this->handle_, buffer, size);
         }
 
 
@@ -220,7 +243,7 @@ namespace coplus {
             handle_(sys_tcp_socket_operation::create()) {
             set_default_socket_option();
         }
-        sys_socket(sys_socket&& other)  noexcept :
+        sys_socket(sys_socket&& other) noexcept :
             handle_(other.handle_) {
             other.handle_ = -1;
         }
@@ -230,8 +253,8 @@ namespace coplus {
             return *this;
         }
         ~sys_socket() {
-//            if (handle_ != -1)
-//                sys_tcp_socket_operation::close(handle_);
+            //            if (handle_ != -1)
+            //                sys_tcp_socket_operation::close(handle_);
         }
 
         template<class IP>
@@ -242,11 +265,11 @@ namespace coplus {
             sys_tcp_socket_operation::listen(handle_);
         }
         template<class IP>
-        [[nodiscard]] std::tuple<sys_socket,net_address<IP>> accept() const {
-            auto [raw_fd,addr,_ ] = sys_tcp_socket_operation::accept(handle_);
-            if(raw_fd == -1)
+        [[nodiscard]] std::tuple<sys_socket, net_address<IP>> accept() const {
+            auto [ raw_fd, addr, _ ] = sys_tcp_socket_operation::accept(handle_);
+            if (raw_fd == -1)
                 throw std::runtime_error(strerror(errno));
-            return {sys_socket(raw_fd),net_address<IP>::from_raw((sockaddr_in*)&addr)};
+            return {sys_socket(raw_fd), net_address<IP>::from_raw((sockaddr_in*) &addr)};
         }
         template<class IP>
         void connect(const net_address<IP>& address) {

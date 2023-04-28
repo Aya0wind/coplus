@@ -8,29 +8,29 @@
 #include "default_awaiter.hpp"
 #include <cassert>
 #include <cstdint>
-#include <fmt/format.h>
 #include <functional>
+#include <iostream>
 #include <sstream>
 namespace coplus {
     void print_thread_id(std::string thread) {
         std::stringstream ss;
         ss << std::this_thread::get_id();
-        fmt::print("thread:{}, id: {}\n", thread, ss.str());
+        std::cout << "thread:<<" << thread << "id:" << ss.str() << "\n";
     }
     template<class return_type>
     struct task {
         using promise_type = promise<return_type>;
 
         explicit task(co_handle<promise_type> handle) :
-            handle(handle){
+            handle(handle) {
         }
         task(task const&) = delete;
         task() :
-            handle(nullptr){
+            handle(nullptr) {
         }
         task(task&& other) noexcept
             :
-            handle(other.handle){
+            handle(other.handle) {
             other.handle = nullptr;
         }
         ~task() {
@@ -120,6 +120,7 @@ namespace coplus {
             s.handle = nullptr;
             return *this;
         }
+
     private:
         co_handle<promise_type> handle;
     };
@@ -128,7 +129,7 @@ namespace coplus {
         using promise_type = detail::promise<>;
         using co_handle = std::coroutine_handle<promise_type>;
         task() :
-            handle(nullptr){
+            handle(nullptr) {
         }
         task(co_handle handle) :
             handle(handle) {
@@ -136,14 +137,14 @@ namespace coplus {
         task(task const&) = delete;
         task(task&& other) noexcept
             :
-            handle(other.handle){
+            handle(other.handle) {
             other.handle = nullptr;
         }
         void resume() {
             handle.resume();
         }
         void destroy() {
-            if(handle)
+            if (handle)
                 handle.destroy();
         }
         bool is_ready() const noexcept {

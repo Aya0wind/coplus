@@ -96,7 +96,7 @@ namespace coplus::detail {
                 std::lock_guard<std::mutex> lock(mutex_);
                 queue_.emplace_back(std::forward<Args>(args)...);
             }
-            cond_.notify_all();
+            cond_.notify_one();
         }
         template<class I>
         void emplace_batch(I begin, I end) {
@@ -104,7 +104,7 @@ namespace coplus::detail {
                 std::lock_guard<std::mutex> lock(mutex_);
                 queue_.insert(queue_.end(), begin, end);
             }
-            cond_.notify_all();
+            cond_.notify_one();
         }
 
         void push_back(T&& t) {

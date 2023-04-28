@@ -12,23 +12,11 @@
 #include "poll/event.hpp"
 #include "poll/poller.hpp"
 #include "poll/traits.hpp"
+#include <cerrno>
+#include <cstddef>
 #include <cstring>
-#include <fmt/core.h>
 #include <memory>
 #include <stdexcept>
-
-#define SYS_CALL(func, ...) [ &, this ](auto&&... args) {     \
-    int result = func(std::forward<decltype(args)>(args)...); \
-    if (result < 0) {                                         \
-        auto& poller = current_worker_context.get_poller();   \
-        poller.deregister_event(*this);                       \
-        throw std::runtime_error(strerror(errno));            \
-    }                                                         \
-    else {                                                    \
-        return result;                                        \
-    }                                                         \
-}(__VA_ARGS__)
-
 
 namespace coplus {
     template<class IP>
@@ -55,7 +43,8 @@ namespace coplus {
         }
 
         bool await_ready() {
-            return false;
+            int read_result = _socket.read_to_end(buffer, size);
+            return read_result >= 0;
         }
 
         void await_suspend(co_handle<void> handle) {
@@ -67,7 +56,7 @@ namespace coplus {
         auto await_resume() {
             auto& poller = current_worker_context.get_poller();
             poller.deregister_event(*this);
-            return SYS_CALL(_socket.read, buffer, size);
+            return _socket.read_to_end(buffer, size);
         }
     };
     template<class IP>
@@ -75,6 +64,7 @@ namespace coplus {
         const sys_socket& _socket;
         const char* buffer;
         size_t size;
+        size_t current_index = 0;
 
     public:
         socket_write_awaiter(const char* buffer, size_t size, const sys_socket& socket) :
@@ -89,7 +79,9 @@ namespace coplus {
         }
 
         bool await_ready() {
-            return false;
+            int write_result = _socket.write(buffer, size);
+            current_index = write_result;
+            return write_result == size;
         }
         detail::handle_type get_handle() const {
             return _socket.raw_fd();
@@ -104,7 +96,8 @@ namespace coplus {
         auto await_resume() {
             auto& poller = current_worker_context.get_poller();
             poller.deregister_event(*this);
-            return SYS_CALL(_socket.write, buffer, size);
+            int write_result = _socket.write(buffer + current_index, size - current_index);
+            return current_index + write_result;
         }
     };
 
@@ -166,7 +159,10 @@ namespace coplus {
         }
 
         bool await_ready() {
-            return false;
+            int connect_result = _socket.connect(this->_address);
+            if (connect_result == -1 && errno == EINPROGRESS)
+                return false;
+            return true;
         }
         [[nodiscard]] detail::handle_type get_handle() const {
             return _socket.raw_fd();
@@ -176,7 +172,6 @@ namespace coplus {
             current_worker_context
                     .get_poller()
                     .register_event(*this, _socket.raw_fd(), Interest::WRITEABLE);
-            SYS_CALL(_socket.connect, this->_address);
             current_worker_context.add_suspend_task(_socket.raw_fd(), handle);
         }
         tcp_stream<IP> await_resume();
@@ -216,7 +211,7 @@ namespace coplus {
             auto&& [ new_socket, addr ] = _socket.accept<IP>();
             auto& poller = current_worker_context.get_poller();
             poller.deregister_event(*this);
-            if(new_socket.raw_fd() == -1)
+            if (new_socket.raw_fd() == -1)
                 throw std::runtime_error("accept error");
             return tcp_stream<IP>(std::move(new_socket), std::move(addr));
         }
@@ -230,6 +225,9 @@ namespace coplus {
         explicit tcp_listener(const net_address<IP>& address) {
             _socket.bind(address);
             _socket.listen();
+        }
+        tcp_listener(const IP& ip, uint16_t port) :
+            tcp_listener(net_address<IP>(ip, port)) {
         }
         ~tcp_listener() = default;
         tcp_listener(const tcp_listener&) = delete;

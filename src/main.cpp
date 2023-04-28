@@ -4,26 +4,25 @@
 #include "network/tcp/socket.hpp"
 #include "sources/socket/tcp_stream.hpp"
 #include "time/delay.hpp"
-#include <fmt/format.h>
 using namespace coplus;
 
 
 task<> server_test() {
-    tcp_listener listener(net_address(ipv4("0.0.0.0"), 8080));
-    char buffer[ 1024 ];
-    char* buffer_ptr = buffer;
+    tcp_listener listener(ipv4("0.0.0.0"), 8080);
     while (true) {
         auto stream = co_await listener.accept();
-        co_runtime::spawn([ buffer_ptr, connection(std::move(stream)) ]() -> task<> {
+        co_runtime::spawn([ connection(std::move(stream)) ]() -> task<> {
+            char buffer[ 1024 ];
             while (true) {
                 try {
-                    size_t size = co_await connection.read(buffer_ptr, sizeof buffer);
-                    if(size==0){
+                    size_t size = co_await connection.read(buffer, sizeof buffer);
+                    if (size == 0) {
                         break;
                     }
-                    co_await connection.write(buffer_ptr, size);
+                    co_await connection.write(buffer, size);
                 } catch (std::exception& e) {
-                    fmt::print("exception:{}\n", e.what());
+                    std::cout << "exception:{}\n"
+                              << e.what();
                     break;
                 }
             }
@@ -34,7 +33,7 @@ task<> server_test() {
 
 task<> client_test() {
     while (true) {
-        fmt::print("wait for 1000ms\n");
+        std::cout << "wait for 1000ms\n";
         co_await 1000_ms;
     }
 }

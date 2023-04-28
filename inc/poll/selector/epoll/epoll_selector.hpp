@@ -26,7 +26,7 @@ namespace coplus::detail {
             if (et_mode) {
                 sys_event.events |= EPOLLET;
             }
-            sys_event.events |= EPOLLONESHOT;
+            // sys_event.events |= EPOLLONESHOT;
             sys_event.events |= EPOLLRDHUP;
             sys_event.events |= EPOLLHUP;
             return epoll_ctl(this->epoll_fd, op, fd, &sys_event);
@@ -37,8 +37,9 @@ namespace coplus::detail {
         }
         static int wake_impl(handle_type sys_handle) {
             //send the stop signal to the selector
-            uint64_t one = 1;
-            return write(sys_handle, &one, sizeof(one));
+            // uint64_t one = 1;
+            // return write(sys_handle, &one, sizeof(one));
+            return 0;
         }
 
 
@@ -47,11 +48,11 @@ namespace coplus::detail {
         }
 
         void register_event_impl(handle_type file_handle, Interest interest, int data, void* udata) const {
-            epoll_event_register(file_handle, interest, EPOLL_CTL_ADD, udata, false);
+            epoll_event_register(file_handle, interest, EPOLL_CTL_ADD, udata, true);
         }
 
         void deregister_event_impl(handle_type file_handle, Interest interest) const {
-            epoll_event_register(file_handle, interest, EPOLL_CTL_DEL, nullptr, false);
+            epoll_event_register(file_handle, interest, EPOLL_CTL_DEL, nullptr, true);
         }
 
     public:
