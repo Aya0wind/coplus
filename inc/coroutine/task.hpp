@@ -22,16 +22,15 @@ namespace coplus {
         using promise_type = promise<return_type>;
 
         explicit task(co_handle<promise_type> handle) :
-            handle(handle), id(id_generator::next_id()) {
+            handle(handle){
         }
         task(task const&) = delete;
         task() :
-            handle(nullptr), id(id_generator::next_id()) {
+            handle(nullptr){
         }
         task(task&& other) noexcept
             :
-            handle(other.handle),
-            id(other.id) {
+            handle(other.handle){
             other.handle = nullptr;
         }
         ~task() {
@@ -68,8 +67,8 @@ namespace coplus {
          * @brief wait for the task<> to complete, and get the ref of the result
          */
         auto operator co_await() const& noexcept {
-            struct awaiter : detail::awaiter_base<return_type> {
-                using detail::awaiter_base<return_type>::awaiter_base;
+            struct awaiter : detail::task_awaiter<return_type> {
+                using detail::task_awaiter<return_type>::task_awaiter;
 
                 decltype(auto) await_resume() {
                     // if (!this->handle) [[unlikely]]
@@ -88,8 +87,8 @@ namespace coplus {
          * result
          */
         auto operator co_await() const&& noexcept {
-            struct awaiter : detail::awaiter_base<return_type> {
-                using detail::awaiter_base<return_type>::awaiter_base;
+            struct awaiter : detail::task_awaiter<return_type> {
+                using detail::task_awaiter<return_type>::task_awaiter;
 
                 decltype(auto) await_resume() {
                     // if (!this->handle) [[unlikely]]
@@ -106,8 +105,8 @@ namespace coplus {
          * @brief wait for the task<> to complete, but do not get the result
          */
         auto when_ready() const noexcept {
-            struct awaiter : detail::awaiter_base<return_type> {
-                using detail::awaiter_base<return_type>::awaiter_base;
+            struct awaiter : detail::task_awaiter<return_type> {
+                using detail::task_awaiter<return_type>::task_awaiter;
 
                 constexpr void await_resume() const noexcept {
                 }
@@ -118,42 +117,34 @@ namespace coplus {
         task<return_type>& operator=(const task<return_type>&) = delete;
         task<return_type>& operator=(task<return_type>&& s) noexcept {
             handle = s.handle;
-            id = s.id;
             s.handle = nullptr;
             return *this;
         }
-        [[nodiscard]] intptr_t get_id() const {
-            return id;
-        }
-
     private:
         co_handle<promise_type> handle;
-        intptr_t id;
     };
     template<>
     struct task<void> {
         using promise_type = detail::promise<>;
         using co_handle = std::coroutine_handle<promise_type>;
         task() :
-            handle(nullptr), id(id_generator::next_id()) {
+            handle(nullptr){
+        }
+        task(co_handle handle) :
+            handle(handle) {
         }
         task(task const&) = delete;
-        explicit task(co_handle handle) :
-            handle(handle), id(id_generator::next_id()) {
-        }
         task(task&& other) noexcept
             :
-            handle(other.handle),
-            id(other.id) {
+            handle(other.handle){
             other.handle = nullptr;
         }
         void resume() {
             handle.resume();
         }
-        ~task() {
-            if (handle) {
+        void destroy() {
+            if(handle)
                 handle.destroy();
-            }
         }
         bool is_ready() const noexcept {
             return !handle || handle.done();
@@ -166,8 +157,8 @@ namespace coplus {
          * @brief wait for the task<> to complete, and get the ref of the result
          */
         auto operator co_await() const& noexcept {
-            struct awaiter : detail::awaiter_base<> {
-                using detail::awaiter_base<>::awaiter_base;
+            struct awaiter : detail::task_awaiter<> {
+                using detail::task_awaiter<>::task_awaiter;
 
                 void await_resume() {
                     assert(this->handle && "broken_promise");
@@ -181,8 +172,8 @@ namespace coplus {
          * result
          */
         auto operator co_await() const&& noexcept {
-            struct awaiter : detail::awaiter_base<> {
-                using detail::awaiter_base<>::awaiter_base;
+            struct awaiter : detail::task_awaiter<> {
+                using detail::task_awaiter<>::task_awaiter;
 
                 void await_resume() {
                     assert(this->handle && "broken_promise");
@@ -196,8 +187,8 @@ namespace coplus {
          * @brief wait for the task<> to complete, but do not get the result
          */
         auto when_ready() const noexcept {
-            struct awaiter : detail::awaiter_base<> {
-                using detail::awaiter_base<>::awaiter_base;
+            struct awaiter : detail::task_awaiter<> {
+                using detail::task_awaiter<>::task_awaiter;
 
                 constexpr void await_resume() const noexcept {
                 }
@@ -207,15 +198,11 @@ namespace coplus {
         task<>& operator=(const task<>&) = delete;
         task<>& operator=(task<>&& s) noexcept {
             handle = s.handle;
-            id = s.id;
             s.handle = nullptr;
             return *this;
         }
         co_handle get_handle() {
             return handle;
-        }
-        [[nodiscard]] intptr_t get_id() const {
-            return id;
         }
 
         [[nodiscard]] std::exception_ptr get_exception() const noexcept {
@@ -224,7 +211,6 @@ namespace coplus {
 
     private:
         co_handle handle;
-        intptr_t id;
     };
     namespace detail {
         template<class T>

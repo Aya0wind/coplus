@@ -4,26 +4,45 @@
 
 #pragma once
 #include "context/runtime.hpp"
+#include "context/worker_thread_context.hpp"
 #include "coroutine/default_awaiter.hpp"
 #include "coroutine/task.hpp"
+#include "network/ip/ipv4.hpp"
+#include "network/tcp/socket.hpp"
+#include "poll/event.hpp"
 #include "poll/poller.hpp"
 #include "poll/traits.hpp"
-#include "socket.hpp"
+#include <cstring>
 #include <fmt/core.h>
 #include <memory>
-namespace coplus {
+#include <stdexcept>
 
-    class socket_read_awaiter : public detail::source_base<selector, socket_read_awaiter> {
+#define SYS_CALL(func, ...) [ &, this ](auto&&... args) {     \
+    int result = func(std::forward<decltype(args)>(args)...); \
+    if (result < 0) {                                         \
+        auto& poller = current_worker_context.get_poller();   \
+        poller.deregister_event(*this);                       \
+        throw std::runtime_error(strerror(errno));            \
+    }                                                         \
+    else {                                                    \
+        return result;                                        \
+    }                                                         \
+}(__VA_ARGS__)
+
+
+namespace coplus {
+    template<class IP>
+    class socket_read_awaiter : public detail::source_base<selector, socket_read_awaiter<IP>> {
         const sys_socket& _socket;
         char* buffer;
         size_t size;
         friend class detail::source_base<selector, socket_read_awaiter>;
         void register_event_impl(selector& selector, intptr_t task_id) const {
-            selector.register_event(_socket.raw_fd(), detail::Interest::READABLE, 0, (void*) task_id);
+            selector.register_event(_socket.raw_fd(), Interest::READABLE, 0, (void*) task_id);
         }
 
         void deregister_event_impl(selector& selector) const {
-            selector.register_event(_socket.raw_fd(), detail::Interest::READABLE, 0, nullptr);
+            selector.register_event(_socket.raw_fd(), Interest::READABLE, 0, nullptr);
         }
 
     public:
@@ -31,7 +50,7 @@ namespace coplus {
             buffer(buffer), size(size), _socket(socket){};
         socket_read_awaiter(const socket_read_awaiter&) = delete;
 
-        detail::handle_type get_handle() const {
+        [[nodiscard]] detail::handle_type get_handle() const {
             return _socket.raw_fd();
         }
 
@@ -40,20 +59,19 @@ namespace coplus {
         }
 
         void await_suspend(co_handle<void> handle) {
-            fmt::print("read wait handle:{}\n", handle.address());
             auto& poller = current_worker_context.get_poller();
-            poller.register_event(*this, current_worker_context.get_current_task_id());
+            poller.register_event(*this, _socket.raw_fd());
+            current_worker_context.add_suspend_task(_socket.raw_fd(), handle);
         }
 
         auto await_resume() {
-            //auto& poller = current_worker_context.get_poller();
-            //poller.deregister_event(*this);
-            return _socket.read(buffer, size);
+            auto& poller = current_worker_context.get_poller();
+            poller.deregister_event(*this);
+            return SYS_CALL(_socket.read, buffer, size);
         }
-        friend class tcp_stream;
     };
-
-    class socket_write_awaiter : public detail::source_base<selector, socket_write_awaiter> {
+    template<class IP>
+    class socket_write_awaiter : public detail::source_base<selector, socket_write_awaiter<IP>> {
         const sys_socket& _socket;
         const char* buffer;
         size_t size;
@@ -63,11 +81,11 @@ namespace coplus {
             buffer(buffer), size(size), _socket(socket){};
 
         void register_event_impl(selector& selector, intptr_t task_id) const {
-            selector.register_event(_socket.raw_fd(), detail::Interest::WRITEABLE, 0, (void*) task_id);
+            selector.register_event(_socket.raw_fd(), Interest::WRITEABLE, 0, (void*) task_id);
         }
 
         void deregister_event_impl(selector& selector) const {
-            selector.register_event(_socket.raw_fd(), detail::Interest::WRITEABLE, 0, nullptr);
+            selector.register_event(_socket.raw_fd(), Interest::WRITEABLE, 0, nullptr);
         }
 
         bool await_ready() {
@@ -79,22 +97,26 @@ namespace coplus {
         void await_suspend(auto handle) {
             current_worker_context
                     .get_poller()
-                    .register_event(*this, current_worker_context.get_current_task_id());
+                    .register_event(*this, _socket.raw_fd());
+            current_worker_context.add_suspend_task(_socket.raw_fd(), handle);
         }
 
         auto await_resume() {
-            //auto& poller = current_worker_context.get_poller();
-            //poller.deregister_event(*this);
-            return _socket.write(buffer, size);
+            auto& poller = current_worker_context.get_poller();
+            poller.deregister_event(*this);
+            return SYS_CALL(_socket.write, buffer, size);
         }
     };
+
+    template<class IP>
     class tcp_stream {
         sys_socket _socket;
+        net_address<IP> _address;
 
     public:
         tcp_stream() = default;
-        tcp_stream(sys_socket socket) :
-            _socket(std::move(socket)) {
+        tcp_stream(sys_socket socket, const net_address<IP>& address) :
+            _socket(std::move(socket)), _address(address) {
         }
         tcp_stream(const tcp_stream&) = delete;
         tcp_stream& operator=(const tcp_stream&) = delete;
@@ -103,22 +125,18 @@ namespace coplus {
             std::swap(_socket, other._socket);
             return *this;
         }
-        ~tcp_stream() {
-            fmt::print("tcp_stream destructed\n");
-        }
         static auto connect(ipv4 ip, uint16_t port);
         [[nodiscard]] auto read(char* buffer, size_t size) const {
-            return socket_read_awaiter(buffer, size, _socket);
+            return socket_read_awaiter<IP>(buffer, size, _socket);
         }
         [[nodiscard]] auto write(const char* buffer, size_t size) const {
-            return socket_write_awaiter(buffer, size, _socket);
+            return socket_write_awaiter<IP>(buffer, size, _socket);
         }
         [[nodiscard]] socket_t raw_fd() const {
             return _socket.raw_fd();
         }
-        friend class socket_listen_awaiter;
-        friend class socket_read_awaiter;
-        friend class socket_write_awaiter;
+        friend class socket_read_awaiter<IP>;
+        friend class socket_write_awaiter<IP>;
     };
 
     template<class IP>
@@ -130,7 +148,7 @@ namespace coplus {
         socket_connect_awaiter(const socket_connect_awaiter&) = delete;
         socket_connect_awaiter(socket_connect_awaiter&&) = default;
         socket_connect_awaiter& operator=(const socket_connect_awaiter&) = delete;
-        socket_connect_awaiter& operator=(socket_connect_awaiter&& other) {
+        socket_connect_awaiter& operator=(socket_connect_awaiter&& other) noexcept {
             std::swap(_socket, other._socket);
             return *this;
         }
@@ -140,33 +158,31 @@ namespace coplus {
         }
 
         void register_event_impl(selector& selector, intptr_t task_id) const {
-            selector.register_event(_socket.raw_fd(), detail::Interest::READABLE, 0, (void*) task_id);
+            selector.register_event(_socket.raw_fd(), Interest::READABLE, 0, (void*) task_id);
         }
 
         void deregister_event_impl(selector& selector, intptr_t task_id) const {
-            selector.register_event(_socket.raw_fd(), detail::Interest::READABLE, 0, (void*) task_id);
+            selector.register_event(_socket.raw_fd(), Interest::READABLE, 0, (void*) task_id);
         }
 
         bool await_ready() {
             return false;
         }
-        detail::handle_type get_handle() const {
+        [[nodiscard]] detail::handle_type get_handle() const {
             return _socket.raw_fd();
         }
 
         void await_suspend(auto handle) {
-            _socket.connect(this->_address);
             current_worker_context
                     .get_poller()
-                    .register_event(*this,
-                                    this->_socket.raw_fd(),
-                                    detail::Interest::WRITEABLE,
-                                    current_worker_context.get_current_task_id());
+                    .register_event(*this, _socket.raw_fd(), Interest::WRITEABLE);
+            SYS_CALL(_socket.connect, this->_address);
+            current_worker_context.add_suspend_task(_socket.raw_fd(), handle);
         }
-        tcp_stream await_resume();
+        tcp_stream<IP> await_resume();
     };
-
-    class socket_listen_awaiter : public detail::source_base<selector, socket_listen_awaiter> {
+    template<class IP>
+    class socket_listen_awaiter : public detail::source_base<selector, socket_listen_awaiter<IP>> {
         sys_socket& _socket;
 
     public:
@@ -176,11 +192,11 @@ namespace coplus {
         socket_listen_awaiter(const socket_listen_awaiter&) = delete;
 
         void register_event_impl(selector& selector, intptr_t task_id) const {
-            selector.register_event(_socket.raw_fd(), detail::Interest::READABLE, 0, (void*) task_id);
+            selector.register_event(_socket.raw_fd(), Interest::READABLE, 0, (void*) task_id);
         }
 
         void deregister_event_impl(selector& selector) const {
-            selector.register_event(_socket.raw_fd(), detail::Interest::READABLE, 0, nullptr);
+            selector.register_event(_socket.raw_fd(), Interest::READABLE, 0, nullptr);
         }
 
         bool await_ready() {
@@ -193,18 +209,24 @@ namespace coplus {
         void await_suspend(auto handle) {
             current_worker_context
                     .get_poller()
-                    .register_event(*this, current_worker_context.get_current_task_id());
+                    .register_event(*this, _socket.raw_fd());
+            current_worker_context.add_suspend_task(_socket.raw_fd(), handle);
         }
-        tcp_stream await_resume() {
-            return {_socket.accept()};
+        tcp_stream<IP> await_resume() {
+            auto&& [ new_socket, addr ] = _socket.accept<IP>();
+            auto& poller = current_worker_context.get_poller();
+            poller.deregister_event(*this);
+            if(new_socket.raw_fd() == -1)
+                throw std::runtime_error("accept error");
+            return tcp_stream<IP>(std::move(new_socket), std::move(addr));
         }
     };
 
+    template<class IP>
     class tcp_listener {
         sys_socket _socket;
 
     public:
-        template<class IP>
         explicit tcp_listener(const net_address<IP>& address) {
             _socket.bind(address);
             _socket.listen();
@@ -213,23 +235,24 @@ namespace coplus {
         tcp_listener(const tcp_listener&) = delete;
         tcp_listener& operator=(const tcp_listener&) = delete;
         tcp_listener(tcp_listener&&) = default;
-        tcp_listener& operator=(tcp_listener&& other) {
+        tcp_listener& operator=(tcp_listener&& other) noexcept {
             std::swap(_socket, other._socket);
             return *this;
         }
         [[nodiscard]] auto accept();
-        friend class socket_listen_awaiter;
+        friend class socket_listen_awaiter<IP>;
     };
-
-    inline auto tcp_stream::connect(ipv4 ip, uint16_t port) {
-        return socket_connect_awaiter(net_address<ipv4>(ip, port));
+    template<class IP>
+    inline auto tcp_stream<IP>::connect(ipv4 ip, uint16_t port) {
+        return socket_connect_awaiter(net_address<IP>(ip, port));
     }
 
     template<class IP>
-    inline tcp_stream socket_connect_awaiter<IP>::await_resume() {
+    inline tcp_stream<IP> socket_connect_awaiter<IP>::await_resume() {
         return tcp_stream(std::move(this->_socket));
     }
-    inline auto tcp_listener::accept() {
-        return socket_listen_awaiter(_socket);
+    template<class IP>
+    inline auto tcp_listener<IP>::accept() {
+        return socket_listen_awaiter<IP>(_socket);
     }
 }// namespace coplus

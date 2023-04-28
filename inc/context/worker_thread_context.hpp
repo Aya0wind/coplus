@@ -7,8 +7,10 @@
 #include "components/id_generator.hpp"
 #include "coroutine/promise.hpp"
 #include "coroutine/task.hpp"
+#include "poll/event.hpp"
 #include "poll/poller.hpp"
-#include "timer.hpp"
+#include "sources/timer/timer.hpp"
+#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <deque>
@@ -16,17 +18,20 @@
 #include <sstream>
 #include <thread>
 #include <unordered_map>
+#include <vector>
 namespace coplus {
     class worker_thread_context {
         detail::poller poller;
-        std::unordered_map<int64_t, task<void>> suspend_tasks;
-        std::list<task<void>> ready_task_queue;
-        intptr_t current_task_id{0};
+        std::unordered_map<token_type, std::vector<task<void>>> suspend_tasks;
+        std::deque<task<void>> ready_task_queue;
         timer_type timer;
-        void wake_task(int64_t task_id) {
-            if (suspend_tasks.contains(task_id)) {
-                ready_task_queue.emplace_back(std::move(suspend_tasks[ task_id ]));
-                suspend_tasks.erase(task_id);
+        void wake_task(token_type waked_token) {
+            if (suspend_tasks.contains(waked_token)) {
+                auto waked_tasks = std::move(suspend_tasks[ waked_token ]);
+                for (auto& task: waked_tasks) {
+                    ready_task_queue.push_back(std::move(task));
+                }
+                suspend_tasks.erase(waked_token);
             }
             // 虚假事件或过期事件，无视
         }
@@ -39,9 +44,6 @@ namespace coplus {
             return timer;
         }
 
-        [[nodiscard]] intptr_t get_current_task_id() const {
-            return current_task_id;
-        }
         detail::poller& get_poller() {
             return poller;
         }
@@ -50,17 +52,30 @@ namespace coplus {
             ready_task_queue.emplace_back(std::move(task));
         }
 
+        void add_suspend_task(token_type token, task<void> task) {
+            suspend_tasks[ token ].push_back(std::move(task));
+        }
+
+
+        class task_destroy_guard{
+            task<void> task;
+        public:
+            task_destroy_guard(::coplus::task<void> task):task(std::move(task)){}
+            ~task_destroy_guard(){
+                task.destroy();
+            }
+        };
+
         void poll_next_task() {
             auto task = std::move(ready_task_queue.front());
-            task<>()
-                    ready_task_queue.pop_front();
-            current_task_id = task.get_id();
+            ready_task_queue.pop_front();
             task.resume();
-            if (task.is_exception())
+            if (task.is_exception()){
+                task_destroy_guard guard(std::move(task));
                 std::rethrow_exception(task.get_exception());
-            if (!task.is_ready()) {
-                suspend_tasks.emplace(task.get_id(), std::move(task));
             }
+            if(task.is_ready())
+                task.destroy();
         }
 
         void poll_all_task() {

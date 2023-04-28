@@ -38,7 +38,9 @@ namespace coplus {
                 if (task.is_exception()) {
                     std::rethrow_exception(task.get_exception());
                 }
-                int event_size = current_worker_context.get_poller().poll_events(events_buffer, std::chrono::milliseconds(100));
+                int event_size = current_worker_context
+                                         .get_poller()
+                                         .poll_events(events_buffer, std::chrono::milliseconds(100));
                 if (event_size > 0) {
                     wake_suspend_tasks(events_buffer, event_size);
                 }
@@ -52,11 +54,11 @@ namespace coplus {
                     continue;
                 }
                 else if (events[ i ].is_read_closed()) {
-                    auto task_id = (intptr_t) events[ i ].get_task_id();
+                    auto task_id = (intptr_t) events[ i ].get_token();
                     current_worker_context.wake_task(task_id);
                 }
                 else {
-                    auto task_id = (intptr_t) events[ i ].get_task_id();
+                    auto task_id = (intptr_t) events[ i ].get_token();
                     current_worker_context.wake_task(task_id);
                 }
             }
@@ -80,20 +82,7 @@ namespace coplus {
             return targetThread;
         }
 
-
-        // void schedule_task_to_event_loop(task<void> task, std::unique_ptr<event_loop> target_event_loop) {
-        //     if (task.is_ready()) {
-        //         return;
-        //     }
-        //     target_event_loop->schedule_task(std::move(task));
-        //     //获取对应线程的任务数量
-        //     auto context_task_num = target_event_loop->all_task_size();
-        //     //更改线程调度情况
-        //     //target_event_loop->wake_poller(target_event_loop->get_poller_sys_handle());
-        //     worker_event_loops[ static_cast<int>(context_task_num) ].emplace_back(std::move(target_event_loop));
-        // }
-
-        void start_wokers() {
+        void start_workers() {
             //initialize threadMap
             auto& event_loops = worker_event_loops[ 0 ];
             event_loops.reserve(worker_num);
@@ -107,14 +96,13 @@ namespace coplus {
             }
         }
 
-
     public:
         mpmc_channel<task<>>& get_global_task_queue() {
             return global_task_queue;
         };
         explicit co_runtime(size_t worker = 2) :
             worker_num(worker), main_loop(needStop) {
-            start_wokers();
+            start_workers();
         }
         static void print_global_task_queue_size() {
             std::cout << "global_task_queue size: " << get_global_runtime().global_task_queue.size() << std::endl;
@@ -180,14 +168,11 @@ namespace coplus {
                 }
                 //尝试推进所有就绪任务
                 current_worker_context.poll_all_task();
-                std::stringstream ss;
-                ss << std::this_thread::get_id();
                 if (!current_worker_context.suspend_tasks.empty()) {
                     //轮询事件
                     int event_size = current_worker_context.poller.poll_events(events_buffer, std::chrono::milliseconds(50));
                     //唤醒监听事件的任务，重新从等待队列加入就绪队列
-                    if (event_size > 0)
-                        wake_suspend_tasks(events_buffer, event_size);
+                    wake_suspend_tasks(events_buffer, event_size);
                 }
             }
         }

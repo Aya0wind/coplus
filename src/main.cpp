@@ -1,16 +1,10 @@
 
 #include "context/runtime.hpp"
-#include "context/worker_thread_context.hpp"
 #include "coroutine/task.hpp"
 #include "network/tcp/socket.hpp"
-#include "network/tcp/tcp_stream.hpp"
-#include "poll/poller.hpp"
+#include "sources/socket/tcp_stream.hpp"
 #include "time/delay.hpp"
-#include <atomic>
-#include <cstddef>
 #include <fmt/format.h>
-#include <functional>
-#include <sstream>
 using namespace coplus;
 
 
@@ -24,6 +18,9 @@ task<> server_test() {
             while (true) {
                 try {
                     size_t size = co_await connection.read(buffer_ptr, sizeof buffer);
+                    if(size==0){
+                        break;
+                    }
                     co_await connection.write(buffer_ptr, size);
                 } catch (std::exception& e) {
                     fmt::print("exception:{}\n", e.what());
@@ -37,8 +34,8 @@ task<> server_test() {
 
 task<> client_test() {
     while (true) {
-        co_await 1000_ms;
         fmt::print("wait for 1000ms\n");
+        co_await 1000_ms;
     }
 }
 

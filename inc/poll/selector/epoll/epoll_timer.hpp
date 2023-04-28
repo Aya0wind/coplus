@@ -13,10 +13,10 @@ namespace coplus {
     class epoll_timer : public detail::source_base<selector, epoll_timer> {
         int timer_fd;
         void register_event_impl(selector& selector, intptr_t taskid) {
-            selector.register_event(timer_fd, detail::Interest::READABLE, 0, (void*) taskid);
+            selector.register_event(timer_fd, Interest::READABLE, 0, (void*) taskid);
         }
         void deregister_event_impl(selector& selector) {
-            selector.deregister_event(timer_fd, detail::Interest::READABLE);
+            selector.deregister_event(timer_fd, Interest::READABLE);
         }
         friend class detail::source_base<selector, epoll_timer>;
 

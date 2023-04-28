@@ -4,10 +4,12 @@
 
 #pragma once
 #include "context/worker_thread_context.hpp"
+#include "coroutine/default_awaiter.hpp"
+#include "poll/event.hpp"
 #include <chrono>
 #include <unistd.h>
 namespace coplus {
-    struct DelayAwaiter {
+    struct DelayAwaiter{
         int expire_times;
         template<class duration_type, class period>
         static DelayAwaiter delay(std::chrono::duration<duration_type, period> duration) {
@@ -18,29 +20,27 @@ namespace coplus {
         DelayAwaiter(const DelayAwaiter&) = delete;
         template<class duration_type, class period>
         DelayAwaiter(std::chrono::duration<duration_type, period> timeout, bool repeat = false) :
-            expire_times(std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()), repeat(repeat) {
+            expire_times(std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()),
+            repeat(repeat)
+        {
         }
 
         bool await_ready() {
-            //bool r = start_duration.count() + time.expire_time<=std::chrono::system_clock::now().time_since_epoch().count();
             return false;
         }
 
         void await_suspend(auto handle) {
             auto& timer = current_worker_context.get_timer();
+            token_type timer_token = timer.get_token();
             timer.set_expire_timeout(expire_times);
             auto& selector = current_worker_context.get_poller().get_selector();
-            timer.register_event(selector, current_worker_context.get_current_task_id());
+            timer.register_event(selector, timer_token);
+            current_worker_context.add_suspend_task(timer_token, handle);
         }
 
         void await_resume() {
             auto& timer = current_worker_context.get_timer();
             auto& selector = current_worker_context.get_poller().get_selector();
-            // uint64_t count = 0;
-            // int readed = 1;
-            // while (readed > 0) {
-            //     readed = read(timer.get_handle(), (void*) &count, sizeof(count));
-            // }
             timer.deregister_event(selector);
         }
 

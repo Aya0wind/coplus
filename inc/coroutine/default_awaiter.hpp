@@ -11,10 +11,10 @@ namespace coplus {
     using co_handle = std::coroutine_handle<promise<return_type>>;
     namespace detail {
         template<class return_type = void>
-        struct awaiter_base {
+        struct task_awaiter {
             using promise_type = promise<return_type>;
             co_handle<promise<return_type>> handle;
-            explicit awaiter_base(std::coroutine_handle<promise_type> current) noexcept
+            explicit task_awaiter(std::coroutine_handle<promise_type> current) noexcept
                 :
                 handle(current) {
             }
@@ -34,10 +34,10 @@ namespace coplus {
         };
 
         template<>
-        struct awaiter_base<void> {
+        struct task_awaiter<void> {
             using promise_type = promise<>;
             co_handle<void> handle;
-            explicit awaiter_base(std::coroutine_handle<promise_type> current) noexcept
+            explicit task_awaiter(std::coroutine_handle<promise_type> current) noexcept
                 :
                 handle(current) {
             }

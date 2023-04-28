@@ -7,11 +7,10 @@
 #include <cstdint>
 namespace coplus {
 
-    class ipv4 {
+    class ipv6 {
         uint32_t ip_;
-
     public:
-        explicit ipv4(const std::string& ip) {
+        explicit ipv6(const std::string& ip) {
             ip_ = inet_addr(ip.data());
         }
         ipv4(int p1, int p2, int p3, int p4) {

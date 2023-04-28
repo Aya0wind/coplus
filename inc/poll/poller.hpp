@@ -46,8 +46,8 @@ namespace coplus::detail {
         }
 
         template<SourceTrait<selector> source_type>
-        void register_event(source_type& source, intptr_t task_id) {
-            source.register_event(inner_selector, task_id);
+        void register_event(source_type& source, token_type token) {
+            source.register_event(inner_selector, token);
         }
 
         template<SourceTrait<selector> source_type>

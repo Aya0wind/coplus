@@ -8,8 +8,8 @@
 #include <cstdint>
 namespace coplus::detail {
 
-    template<class Selector>
-    concept SelectorTrait = requires(Selector s) {
+    template<class selector_type>
+    concept SelectorTrait = requires(selector_type s) {
         {
             s.select(std::declval<events&>(), std::declval<::std::chrono::milliseconds>())
             } -> std::same_as<int>;
@@ -30,7 +30,7 @@ namespace coplus::detail {
     template<class T, class S>
     concept SourceTrait = requires(T t) {
         {
-            t.register_event(std::declval<S&>(), std::declval<intptr_t>())
+            t.register_event(std::declval<S&>(), std::declval<token_type>())
             } -> std::same_as<void>;
         {
             t.deregister_event(std::declval<S&>())
@@ -41,36 +41,36 @@ namespace coplus::detail {
     }
     &&SelectorTrait<S>;
 
-    template<class SelectorImpl>
+    template<class selector_type>
     class selector_base {
     public:
         selector_base() = default;
         [[gnu::always_inline]] [[nodiscard]] int get_handle() const {
-            return static_cast<const SelectorImpl*>(this)->get_handle_impl();
+            return static_cast<const selector_type*>(this)->get_handle_impl();
         }
         [[gnu::always_inline]] int wake(handle_type sys_handle) {
-            return static_cast<const SelectorImpl*>(this)->wake_impl(sys_handle);
+            return static_cast<const selector_type*>(this)->wake_impl(sys_handle);
         }
         [[gnu::always_inline]] int select(::std::vector<event>& events, ::std::chrono::milliseconds timeout) const {
-            return static_cast<const SelectorImpl*>(this)->select_impl(events, timeout);
+            return static_cast<const selector_type*>(this)->select_impl(events, timeout);
         }
         [[gnu::always_inline]] void register_event(handle_type file_handle, Interest interest, int data, void* udata) const {
-            return static_cast<const SelectorImpl*>(this)->register_event_impl(file_handle, interest, data, udata);
+            return static_cast<const selector_type*>(this)->register_event_impl(file_handle, interest, data, udata);
         }
         [[gnu::always_inline]] void deregister_event(handle_type file_handle, Interest interest) const {
-            return static_cast<const SelectorImpl*>(this)->deregister_event_impl(file_handle, interest);
+            return static_cast<const selector_type*>(this)->deregister_event_impl(file_handle, interest);
         }
     };
 
-    template<SelectorTrait Selector, class SourceImpl>
+    template<SelectorTrait S, class Src>
     class source_base {
     public:
         source_base() = default;
-        [[gnu::always_inline]] void register_event(Selector& s, intptr_t taskid) {
-            return static_cast<SourceImpl*>(this)->register_event_impl(s, taskid);
+        [[gnu::always_inline]] void register_event(S& s, token_type token) {
+            static_cast<Src*>(this)->register_event_impl(s, token);
         }
-        [[gnu::always_inline]] void deregister_event(Selector& s) {
-            return static_cast<SourceImpl*>(this)->deregister_event_impl(s);
+        [[gnu::always_inline]] void deregister_event(S& s) {
+            static_cast<Src*>(this)->deregister_event_impl(s);
         }
     };
 

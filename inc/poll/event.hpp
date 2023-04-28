@@ -4,7 +4,7 @@
 
 #pragma once
 #include <cstdint>
-namespace coplus::detail {
+namespace coplus{
     enum Interest : uint8_t {
         READABLE = 1,
         WRITEABLE = 2,
@@ -12,39 +12,41 @@ namespace coplus::detail {
         TIMER = 8,
         ALL = READABLE | WRITEABLE | AIO | TIMER
     };
-    template<class E>
-    struct event_base {
-        //crtp call derived class method
-    public:
-        [[nodiscard]] intptr_t get_task_id() const {
-            return static_cast<const E*>(this)->get_task_id_impl();
-        }
-        [[nodiscard]] bool is_readable() const {
-            return static_cast<const E*>(this)->is_readable_impl();
-        }
-        [[nodiscard]] bool is_writeable() const {
-            return static_cast<const E*>(this)->is_writeable_impl();
-        }
-        [[nodiscard]] bool is_aio() const {
-            return static_cast<const E*>(this)->is_aio_impl();
-        }
-        [[nodiscard]] bool is_timer() const {
-            return static_cast<const E*>(this)->is_timer_impl();
-        }
-        [[nodiscard]] bool is_error() const {
-            return static_cast<const E*>(this)->is_error_impl();
-        }
-        [[nodiscard]] bool is_read_closed() const {
-            return static_cast<const E*>(this)->is_read_closed_impl();
-        }
-        [[nodiscard]] bool is_write_closed() const {
-            return static_cast<const E*>(this)->is_write_closed_impl();
-        }
-        [[nodiscard]] bool is_priority() const {
-            return static_cast<const E*>(this)->is_priority_impl();
-        }
-    };
-
+    using token_type = int64_t;
+    namespace detail {
+        template<class E>
+        struct event_base {
+            //crtp call derived class method
+        public:
+            [[nodiscard]] token_type get_token() const {
+                return static_cast<const E*>(this)->get_token_impl();
+            }
+            [[nodiscard]] bool is_readable() const {
+                return static_cast<const E*>(this)->is_readable_impl();
+            }
+            [[nodiscard]] bool is_writeable() const {
+                return static_cast<const E*>(this)->is_writeable_impl();
+            }
+            [[nodiscard]] bool is_aio() const {
+                return static_cast<const E*>(this)->is_aio_impl();
+            }
+            [[nodiscard]] bool is_timer() const {
+                return static_cast<const E*>(this)->is_timer_impl();
+            }
+            [[nodiscard]] bool is_error() const {
+                return static_cast<const E*>(this)->is_error_impl();
+            }
+            [[nodiscard]] bool is_read_closed() const {
+                return static_cast<const E*>(this)->is_read_closed_impl();
+            }
+            [[nodiscard]] bool is_write_closed() const {
+                return static_cast<const E*>(this)->is_write_closed_impl();
+            }
+            [[nodiscard]] bool is_priority() const {
+                return static_cast<const E*>(this)->is_priority_impl();
+            }
+        };
+    }
 }// namespace coplus::detail
 
 
@@ -58,8 +60,8 @@ namespace coplus::detail {
     class epoll_event : public event_base<epoll_event> {
         detail::sys_event sys_event;
         friend class event_base<epoll_event>;
-        [[nodiscard]] intptr_t get_task_id_impl() const {
-            return static_cast<intptr_t>(sys_event.data.u64);
+        [[nodiscard]] token_type get_token_impl() const {
+            return static_cast<token_type>(sys_event.data.u64);
         }
         [[nodiscard]] bool is_readable_impl() const {
             return sys_event.events == EPOLLIN;
@@ -111,8 +113,8 @@ namespace coplus::detail {
     class kqueue_event : public event_base<kqueue_event> {
         detail::sys_event sys_event;
         friend class event_base<kqueue_event>;
-        [[nodiscard]] intptr_t get_task_id_impl() const {
-            return reinterpret_cast<intptr_t>(sys_event.udata);
+        [[nodiscard]] token_type get_token_impl() const {
+            return reinterpret_cast<token_type>(sys_event.udata);
         }
         [[nodiscard]] bool is_readable_impl() const {
             return sys_event.filter == EVFILT_READ || sys_event.filter == EVFILT_USER;
