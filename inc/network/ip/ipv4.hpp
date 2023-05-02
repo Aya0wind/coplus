@@ -3,9 +3,7 @@
 //
 
 #pragma once
-#include <arpa/inet.h>
 #include <cstdint>
-#include <netinet/in.h>
 #include <string>
 namespace coplus {
 

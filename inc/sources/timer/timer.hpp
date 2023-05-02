@@ -10,9 +10,10 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <unistd.h>
+
 
 #ifdef __APPLE__
+#include <unistd.h>
 #include "poll/selector/kqueue/kqueue_timer.hpp"
 namespace coplus {
     using timer_type = coplus::kqueue_timer;
@@ -23,6 +24,7 @@ namespace coplus {
     using timer_type = coplus::iocp_timer;
 }
 #elif __linux__
+#include <unistd.h>
 #include "poll/selector/epoll/epoll_timer.hpp"
 namespace coplus {
     using timer_type = coplus::epoll_timer;

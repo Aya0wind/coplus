@@ -57,28 +57,15 @@ namespace coplus {
         }
 
 
-        class task_destroy_guard {
-            task<void> _task;
-
-        public:
-            task_destroy_guard(::coplus::task<void> task) :
-                _task(std::move(task)) {
-            }
-            ~task_destroy_guard() {
-                _task.destroy();
-            }
-        };
-
         void poll_next_task() {
             auto task = std::move(ready_task_queue.front());
             ready_task_queue.pop_front();
             task.resume();
             if (task.is_exception()) {
-                task_destroy_guard guard(std::move(task));
                 std::rethrow_exception(task.get_exception());
             }
-            if (task.is_ready())
-                task.destroy();
+            if (!task.is_ready())
+                task.detach_handle();
         }
 
         void poll_all_task() {

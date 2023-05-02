@@ -12,7 +12,7 @@ namespace coplus {
         TIMER = 8,
         ALL = READABLE | WRITEABLE | AIO | TIMER
     };
-    using token_type = int64_t;
+    using token_type = uint64_t;
     namespace detail {
         template<class E>
         struct event_base {
@@ -156,5 +156,80 @@ namespace coplus {
     using event = detail::kqueue_event;
     using events = ::std::vector<event>;
 }// namespace coplus
-#elif _WIN32
+#elif _WIN32 || _WIN64
+#pragma  comment(lib, "ws2_32.lib")
+#pragma  comment(lib, "kernel32.lib")
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#include <vector>
+namespace coplus{
+    using handle_type = HANDLE;
+    enum IO_EVENT
+    {
+        IO_ACCEPT,
+        IO_RECV,
+        IO_SEND
+    };
+    struct IOContext {
+        IOContext(char* buffer,ULONG buffer_size, IO_EVENT type, SOCKET socket) : type(type), socket(socket), wsaBuf{static_cast<ULONG>(buffer_size), buffer}
+        {}
+        OVERLAPPED overlapped{};
+        WSABUF wsaBuf;
+        IO_EVENT type;
+        SOCKET socket = INVALID_SOCKET;
+        DWORD nBytes = 0;
+        ULONG flags = 0;
+    };
+}
+
+namespace coplus::detail {
+    using sys_event = IOContext;
+    using sys_events = ::std::vector<sys_event>;
+    class iocp_event : public event_base<iocp_event> {
+        detail::sys_event sys_event;
+
+        friend class event_base<iocp_event>;
+        [[nodiscard]] token_type get_token_impl() const {
+            return (token_type)(sys_event.socket);
+        }
+        [[nodiscard]] bool is_readable_impl() const {
+            return sys_event.type == IO_EVENT::IO_RECV;
+        }
+        [[nodiscard]] bool is_writeable_impl() const {
+            return sys_event.type == IO_EVENT::IO_SEND;
+        }
+        [[nodiscard]] bool is_aio_impl() const {
+            return false;
+        }
+        [[nodiscard]] bool is_timer_impl() const {
+            return false;
+        }
+        [[nodiscard]] bool is_error_impl() const {
+            return false;
+        }
+
+        [[nodiscard]] bool is_read_closed_impl() const {
+            return sys_event.type==IO_EVENT::IO_RECV&&sys_event.nBytes==0;
+        }
+        [[nodiscard]] bool is_write_closed_impl() const {
+            return sys_event.type==IO_EVENT::IO_SEND&&sys_event.nBytes==0;
+        }
+        [[nodiscard]] bool is_priority_impl() const {
+            return false;
+        }
+
+    public:
+        explicit iocp_event(detail::sys_event e) :
+            sys_event(e){};
+        explicit operator detail::sys_event&() {
+            return reinterpret_cast<detail::sys_event&>(*this);
+        }
+        iocp_event() = default;
+    };
+
+}// namespace coplus::detail
+namespace coplus {
+    using event = detail::iocp_event;
+    using events = ::std::vector<event>;
+}// namespace coplus
 #endif

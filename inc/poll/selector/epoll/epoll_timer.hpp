@@ -38,7 +38,7 @@ namespace coplus {
                 throw std::runtime_error(std::string("timerfd_settime error") + strerror(errno));
         }
 
-        detail::handle_type get_handle() const {
+        handle_type get_handle() const {
             return timer_fd;
         }
         token_type get_token() const {

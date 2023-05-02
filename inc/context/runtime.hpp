@@ -1,7 +1,7 @@
-#pragma once
 //
 // Created by junjian LI on 2022/9/7.
 //
+#pragma once
 #include "components/mpmc_channel.hpp"
 #include "context/worker_thread_context.hpp"
 #include "coroutine/promise.hpp"
@@ -169,10 +169,15 @@ namespace coplus {
                 //尝试推进所有就绪任务
                 current_worker_context.poll_all_task();
                 if (!current_worker_context.suspend_tasks.empty()) {
-                    //轮询事件
-                    int event_size = current_worker_context.poller.poll_events(events_buffer, std::chrono::milliseconds(50));
-                    //唤醒监听事件的任务，重新从等待队列加入就绪队列
-                    wake_suspend_tasks(events_buffer, event_size);
+                    int event_size = 0;
+                    //尝试尽可能的处理更多的事件
+                    do{
+                        event_size = current_worker_context
+                                             .get_poller()
+                                             .poll_events(events_buffer, std::chrono::milliseconds(50));
+                        if (event_size > 0)
+                            wake_suspend_tasks(events_buffer, event_size);
+                    }while (event_size!=0);
                 }
             }
         }

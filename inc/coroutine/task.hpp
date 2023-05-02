@@ -143,9 +143,13 @@ namespace coplus {
         void resume() {
             handle.resume();
         }
-        void destroy() {
-            if (handle)
+        void detach_handle() {
+            handle = nullptr;
+        }
+        ~task() {
+            if (handle) {
                 handle.destroy();
+            }
         }
         bool is_ready() const noexcept {
             return !handle || handle.done();

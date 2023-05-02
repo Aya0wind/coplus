@@ -44,7 +44,7 @@ namespace coplus::detail {
     class selector_base {
     public:
         selector_base() = default;
-        [[gnu::always_inline]] [[nodiscard]] int get_handle() const {
+        [[gnu::always_inline]] [[nodiscard]] handle_type get_handle() const {
             return static_cast<const selector_type*>(this)->get_handle_impl();
         }
         [[gnu::always_inline]] int wake(handle_type sys_handle) {
