@@ -4,7 +4,8 @@
 
 #pragma once
 #include "context/worker_thread_context.hpp"
-#include "coroutine/default_awaiter.hpp"
+#include "coroutine/promise.hpp"
+#include "coroutine/task_awaiter.hpp"
 #include "poll/event.hpp"
 #include <chrono>
 
@@ -19,7 +20,7 @@ namespace coplus {
         DelayAwaiter() = delete;
         DelayAwaiter(const DelayAwaiter&) = delete;
         template<class duration_type, class period>
-        DelayAwaiter(std::chrono::duration<duration_type, period> timeout, bool repeat = false) :
+        explicit DelayAwaiter(std::chrono::duration<duration_type, period> timeout, bool repeat = false) :
             expire_times(std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()),
             repeat(repeat) {
         }
@@ -34,7 +35,7 @@ namespace coplus {
             timer.set_expire_timeout(expire_times);
             auto& selector = current_worker_context.get_poller().get_selector();
             timer.register_event(selector, timer_token);
-            current_worker_context.add_suspend_task(timer_token, handle);
+            current_worker_context.add_suspend_task(timer_token, task<>(handle));
         }
 
         void await_resume() {

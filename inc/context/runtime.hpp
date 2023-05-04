@@ -7,6 +7,7 @@
 #include "coroutine/promise.hpp"
 #include "coroutine/task.hpp"
 #include "poll/event.hpp"
+#include <concepts>
 #include <map>
 #include <queue>
 #include <string>
@@ -14,11 +15,36 @@
 #include <vector>
 namespace coplus {
     namespace detail {
+//        template<typename T>
+//        struct remove_rvalue_reference {
+//            using type = T;
+//        };
+
+//        template<typename T>
+//        struct remove_rvalue_reference<T &&> {
+//            using type = T;
+//        };
+//
+//        template<typename T>
+//        using remove_rvalue_reference_t = typename remove_rvalue_reference<T>::type;
+//
+//        template<typename Awaiter>
+//        using get_awaiter_result_t = decltype(std::declval<Awaiter>().await_resume());
+//
+//        template<typename Awaiter>
+//        auto make_task(Awaiter awaiter) -> task<
+//                detail::remove_rvalue_reference_t<detail::get_awaiter_result_t<Awaiter>>> {
+//            co_return co_await static_cast<Awaiter &&>(awaiter);
+//        }
         template<std::invocable Fn>
-        task<> make_task(Fn fn) {
-            co_await std::invoke(std::move(fn));
+        auto make_task(Fn fn) -> task<> {
+            auto inner_task  = std::invoke(std::move(fn));
+            co_await inner_task;
+            inner_task.detach_handle();
             co_return;
         }
+
+
     }// namespace detail
 
 
@@ -132,6 +158,7 @@ namespace coplus {
             auto task = detail::make_task(std::move(fn));
             spawn(std::move(task));
         }
+
 
         inline static co_runtime& get_global_runtime() {
             static co_runtime global_runtime;

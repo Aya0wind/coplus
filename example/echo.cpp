@@ -1,20 +1,19 @@
 
 #include "context/runtime.hpp"
+#include "coroutine/promise.hpp"
 #include "coroutine/task.hpp"
 #include "network/tcp/socket.hpp"
-#include "sources/socket/tcp_stream.hpp"
-#include "time/delay.hpp"
+#include "sources/tcp_stream/tcp_stream.hpp"
 using namespace coplus;
 
-
 task<> server_test() {
-    tcp_listener listener(ipv4("0.0.0.0"), 8080);
+    tcp_listener listener(ipv4("0.0.0.0"), 8082);
     while (true) {
         auto stream = co_await listener.accept();
-        co_runtime::spawn([ connection(std::move(stream)) ]() -> task<> {
+        co_runtime::spawn([connection = std::move(stream)]()->task<>{
             char buffer[ 4096 ];
-            while (true) {
-                try {
+            try {
+                while (true) {
                     size_t size = co_await connection.read(buffer, sizeof buffer);
                     //std::cout<<"read size:"<<size<<"\n";
                     if (size == 0) {
@@ -22,10 +21,9 @@ task<> server_test() {
                     }
                     co_await connection.write(buffer, size);
                     //std::cout<<"write size:"<<size<<"\n";
-                } catch (std::exception& e) {
-                    std::cout << "exception:"<< e.what()<<'\n';
-                    break;
                 }
+            } catch (std::exception& e) {
+                std::cout << "exception:" << e.what() << '\n';
             }
         });
     }

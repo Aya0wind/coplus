@@ -5,7 +5,7 @@
 #pragma once
 
 #include "components/id_generator.hpp"
-#include "default_awaiter.hpp"
+#include "task_awaiter.hpp"
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -131,14 +131,20 @@ namespace coplus {
         task() :
             handle(nullptr) {
         }
-        task(co_handle handle) :
+        explicit task(co_handle handle) :
             handle(handle) {
         }
         task(task const&) = delete;
+        task<>& operator=(const task<>&) = delete;
         task(task&& other) noexcept
             :
             handle(other.handle) {
-            other.handle = nullptr;
+            other.detach_handle();
+        }
+        task<>& operator=(task<>&& other) noexcept {
+            handle = other.handle;
+            other.detach_handle();
+            return *this;
         }
         void resume() {
             handle.resume();
@@ -151,11 +157,11 @@ namespace coplus {
                 handle.destroy();
             }
         }
-        bool is_ready() const noexcept {
+        [[nodiscard]] bool is_ready() const noexcept {
             return !handle || handle.done();
         }
 
-        bool is_exception() const noexcept {
+        [[nodiscard]] bool is_exception() const noexcept {
             return handle.promise().is_exception();
         }
         /**
@@ -200,12 +206,8 @@ namespace coplus {
             };
             return awaiter{handle};
         }
-        task<>& operator=(const task<>&) = delete;
-        task<>& operator=(task<>&& s) noexcept {
-            handle = s.handle;
-            s.handle = nullptr;
-            return *this;
-        }
+
+
         co_handle get_handle() {
             return handle;
         }

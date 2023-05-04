@@ -8,7 +8,7 @@ include_directories(inc)
 
 # find_package(fmt CONFIG REQUIRED)
 
-# add_executable(example-timer example/timer.cpp)
+add_executable(example-timer example/timer.cpp)
 add_executable(example-echo example/echo.cpp)
 # target_link_libraries(coroutine PRIVATE fmt::fmt)
 # target_link_libraries(coroutine PRIVATE -lpthread)

@@ -111,7 +111,7 @@ namespace coplus::detail {
         void push_back(T&& t) {
             {
                 std::lock_guard<std::mutex> lock(mutex_);
-                queue_.push_back(std::forward<T>(t));
+                queue_.emplace_back(std::forward<T>(t));
             }
             cond_.notify_all();
         }

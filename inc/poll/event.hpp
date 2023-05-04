@@ -105,10 +105,12 @@ namespace coplus {
 #elif __APPLE__
 #include <sys/event.h>
 #include <vector>
+namespace coplus {
+    using handle_type = int;
+}
 namespace coplus::detail {
     using sys_event = struct kevent;
     using sys_events = ::std::vector<sys_event>;
-    using handle_type = int;
 
     class kqueue_event : public event_base<kqueue_event> {
         detail::sys_event sys_event;
@@ -171,12 +173,12 @@ namespace coplus{
         IO_SEND
     };
     struct IOContext {
-        IOContext(char* buffer,ULONG buffer_size, IO_EVENT type, SOCKET socket) : type(type), socket(socket), wsaBuf{static_cast<ULONG>(buffer_size), buffer}
+        IOContext(char* buffer,ULONG buffer_size, IO_EVENT type, SOCKET tcp_stream) : type(type), tcp_stream(tcp_stream), wsaBuf{static_cast<ULONG>(buffer_size), buffer}
         {}
         OVERLAPPED overlapped{};
         WSABUF wsaBuf;
         IO_EVENT type;
-        SOCKET socket = INVALID_SOCKET;
+        SOCKET tcp_stream = INVALID_SOCKET;
         DWORD nBytes = 0;
         ULONG flags = 0;
     };
@@ -190,7 +192,7 @@ namespace coplus::detail {
 
         friend class event_base<iocp_event>;
         [[nodiscard]] token_type get_token_impl() const {
-            return (token_type)(sys_event.socket);
+            return (token_type)(sys_event.tcp_stream);
         }
         [[nodiscard]] bool is_readable_impl() const {
             return sys_event.type == IO_EVENT::IO_RECV;

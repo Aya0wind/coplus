@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <arpa/inet.h>
 #include <cstdint>
 #include <string>
 namespace coplus {
@@ -95,12 +96,12 @@ namespace coplus {
             ip_(p1, p2, p3, p4), port_(port) {
         }
         static net_address<ipv4> from_raw(sockaddr_in* addr) {
-            return net_address<ipv4>(ipv4(addr->sin_addr.s_addr), addr->sin_port);
+            return {ipv4(addr->sin_addr.s_addr), addr->sin_port};
         }
         void set_port(uint16_t port) {
             port_ = port;
         }
-        const ipv4& ip() const {
+        [[nodiscard]] const ipv4& ip() const {
             return ip_;
         }
         [[nodiscard]] uint16_t port() const {
