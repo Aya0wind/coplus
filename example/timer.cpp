@@ -1,7 +1,7 @@
 
-#include "context/runtime.hpp"
-#include "coroutine/task.hpp"
-#include "time/delay.hpp"
+#include "coplus/context/runtime.hpp"
+#include "coplus/coroutine/task.hpp"
+#include "coplus/time/delay.hpp"
 using namespace coplus;
 
 task<> client_test() {
