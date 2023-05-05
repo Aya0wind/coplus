@@ -3,7 +3,7 @@
 //
 
 #pragma once
-#include "coplus/../../traits.hpp"
+#include "coplus/poll/traits.hpp"
 #include "coplus/poll/event.hpp"
 #include <ctime>
 #include <iostream>
