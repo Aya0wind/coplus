@@ -24,7 +24,6 @@ namespace coplus {
             socket_t socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
             if (socket == -1)
                 throw std::runtime_error(std::strerror(errno));
-            fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) | O_NONBLOCK);
             return socket;
         }
         [[gnu::always_inline]] static int close(socket_t socket) {
@@ -117,10 +116,10 @@ namespace coplus {
                 throw std::runtime_error(std::strerror(errno));
         }
 
-
-        static void default_socket_option(socket_t tcp_stream) {
+        static void default_socket_option(socket_t socket) {
             int opt = 1;
-            set_socket_option(tcp_stream, SOL_SOCKET, 0, (void*) (&opt), sizeof(opt));
+            fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) | O_NONBLOCK);
+            set_socket_option(socket, SOL_SOCKET, SO_KEEPALIVE, (void*) (&opt), sizeof(opt));
         }
     };
 }// namespace coplus

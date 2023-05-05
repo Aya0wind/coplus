@@ -165,7 +165,7 @@ namespace coplus {
 
     inline void event_loop::operator()() {
         {
-            auto events_buffer = events(8);
+            auto events_buffer = events(256);
             while (!stop_token.load(std::memory_order_relaxed)) {
                 //如果就绪队列为空，代表已经没有可以继续推进的任务了，再次尝试从全局任务队列中获取任务
                 if (current_worker_context.ready_task_queue.empty()) {
@@ -181,7 +181,8 @@ namespace coplus {
                     event_size = current_worker_context
                                          .get_poller()
                                          .poll_events(events_buffer, std::chrono::milliseconds(50));
-                    wake_suspend_tasks(events_buffer, event_size);
+                    if (event_size > 0)
+                        wake_suspend_tasks(events_buffer, event_size);
                 }
             }
         }

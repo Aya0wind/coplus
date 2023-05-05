@@ -22,7 +22,7 @@ namespace coplus {
         }
 
         void deregister_event_impl(selector& selector) const {
-            //selector.deregister_event(_socket.raw_fd(), Interest::READABLE);
+            selector.deregister_event(_socket.raw_handle(), Interest::READABLE);
         }
 
     public:
@@ -71,7 +71,7 @@ namespace coplus {
         }
 
         void deregister_event_impl(selector& selector) const {
-            //selector.deregister_event(_socket.raw_handle(), Interest::WRITEABLE);
+            selector.deregister_event(_socket.raw_handle(), Interest::WRITEABLE);
         }
 
         bool await_ready() {
@@ -149,7 +149,7 @@ namespace coplus {
         }
 
         void deregister_event_impl(selector& selector, token_type task_id) const {
-            //selector.deregister_event(_socket.raw_handle(), Interest::READABLE);
+            selector.deregister_event(_socket.raw_handle(), Interest::READABLE);
         }
 
         bool await_ready() {
@@ -181,7 +181,7 @@ namespace coplus {
         }
 
         void deregister_event_impl(selector& selector) const {
-            //selector.deregister_event(_socket.raw_fd(), Interest::READABLE);
+            selector.deregister_event(_socket.raw_handle(), Interest::READABLE);
         }
 
         bool await_ready() {

@@ -11,6 +11,6 @@ class id_generator {
 
 public:
     static intptr_t next_id() {
-        return id_++;
+        return id_.fetch_add(1, std::memory_order_relaxed);
     }
 };
