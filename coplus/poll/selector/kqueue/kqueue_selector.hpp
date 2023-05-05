@@ -3,8 +3,8 @@
 //
 
 #pragma once
-#include "coplus/poll/traits.hpp"
 #include "coplus/poll/event.hpp"
+#include "coplus/poll/traits.hpp"
 #include <ctime>
 #include <iostream>
 #include <sys/event.h>

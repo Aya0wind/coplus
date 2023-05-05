@@ -4,7 +4,7 @@
 
 #pragma once
 #include <WinSock2.h>
-namespace coplus{
+namespace coplus {
     using socket_t = SOCKET;
     struct io_event_context {
         char* buffer;
@@ -53,8 +53,7 @@ namespace coplus{
                              &context->nBytes,
                              &context->flags,
                              &context->overlapped,
-                             nullptr
-            );
+                             nullptr);
         }
         [[gnu::always_inline]] static int write(IOContext* context) {
             return ::WSARecv(context->tcp_stream,
@@ -63,12 +62,11 @@ namespace coplus{
                              &context->nBytes,
                              &context->flags,
                              &context->overlapped,
-                             nullptr
-            );
+                             nullptr);
         }
 
         [[gnu::always_inline]] static int set_socket_option(socket_t tcp_stream, int level, int option_name, const void* option_value, socklen_t option_len) {
-            return ::setsockopt(tcp_stream, level, option_name, (const char*)option_value, option_len);
+            return ::setsockopt(tcp_stream, level, option_name, (const char*) option_value, option_len);
         }
         [[gnu::always_inline]] static void set_non_blocking(socket_t tcp_stream) {
             ULONG arg = 1;

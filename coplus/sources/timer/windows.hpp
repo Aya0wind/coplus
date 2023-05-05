@@ -21,8 +21,8 @@ namespace coplus {
     public:
         socket_read_awaiter(char* buffer, size_t size, const sys_socket& tcp_stream) :
             _socket(tcp_stream),
-            _context(buffer,size,IO_EVENT::IO_RECV,tcp_stream.raw_handle())
-        {}
+            _context(buffer, size, IO_EVENT::IO_RECV, tcp_stream.raw_handle()) {
+        }
 
         socket_read_awaiter(const socket_read_awaiter&) = delete;
 
@@ -42,7 +42,7 @@ namespace coplus {
         }
 
         auto await_resume() {
-            if(already_read){
+            if (already_read) {
                 return static_cast<int>(size);
             }
             auto& poller = current_worker_context.get_poller();
@@ -131,7 +131,7 @@ namespace coplus {
 
     public:
         socket_connect_awaiter(const socket_connect_awaiter&) = delete;
-        socket_connect_awaiter(socket_connect_awaiter&&)  noexcept = default;
+        socket_connect_awaiter(socket_connect_awaiter&&) noexcept = default;
         socket_connect_awaiter& operator=(const socket_connect_awaiter&) = delete;
         socket_connect_awaiter& operator=(socket_connect_awaiter&& other) noexcept {
             std::swap(_socket, other._socket);
@@ -204,7 +204,7 @@ namespace coplus {
             auto& poller = current_worker_context.get_poller();
             poller.deregister_event(*this);
             if (new_socket.raw_fd() == -1)
-                throw std::runtime_error(std::string ("accept error:")+strerror(errno));
+                throw std::runtime_error(std::string("accept error:") + strerror(errno));
             return tcp_stream<IP>(std::move(new_socket), std::move(addr));
         }
     };
@@ -224,7 +224,7 @@ namespace coplus {
         ~tcp_listener() = default;
         tcp_listener(const tcp_listener&) = delete;
         tcp_listener& operator=(const tcp_listener&) = delete;
-        tcp_listener(tcp_listener&&)  noexcept = default;
+        tcp_listener(tcp_listener&&) noexcept = default;
         tcp_listener& operator=(tcp_listener&& other) noexcept {
             std::swap(_socket, other._socket);
             return *this;
