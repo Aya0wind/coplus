@@ -85,3 +85,28 @@ cd your/configure/path
 make example-xxx
 ./example-xxx
 ```
+## Build
+### cmake
+1. install the library
+```shell
+cmake -Byour/configure/path --prefix=your/install/path
+cd your/configure/path
+make install
+```
+2. use cmake to import the library
+```cmake
+cmake_minimum_required(VERSION 3.16)
+project(your_project)
+set(coplus_DIR your/install/path/share/cmake/coplus)
+find_package(coplus REQUIRED)
+add_executable(your_project main.cpp)
+target_link_libraries(your_project PRIVATE coplus::coplus)
+```
+### Example
+run the specified example
+```shell
+cmake -Byour/configure/path --prefix=your/install/path
+cd your/configure/path
+make example-xxx
+./example-xxx
+```

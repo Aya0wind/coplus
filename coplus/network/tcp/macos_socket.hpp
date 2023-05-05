@@ -23,7 +23,6 @@ namespace coplus {
             socket_t socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
             if (socket == -1)
                 throw std::runtime_error(std::strerror(errno));
-            fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) | O_NONBLOCK);
             return socket;
         }
         [[gnu::always_inline]] static int close(socket_t socket) {
@@ -98,14 +97,14 @@ namespace coplus {
 
         [[gnu::always_inline]] static int read(socket_t socket, io_event_context& context) {
             int read_result = ::read(socket, context.buffer, context.size);
-            if (read_result < 0)
+            if (read_result ==-1&&errno!=EAGAIN)
                 throw std::runtime_error(std::strerror(errno));
             return read_result;
         }
 
         [[gnu::always_inline]] static int write(socket_t socket, io_event_context& context) {
             int write_result = ::write(socket, context.buffer, context.size);
-            if (write_result < 0)
+            if (write_result ==-1&&errno!=EAGAIN)
                 throw std::runtime_error(std::strerror(errno));
             return write_result;
         }

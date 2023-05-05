@@ -11,16 +11,17 @@ task<> server_test() {
             try {
                 while (true) {
                     size_t size = co_await connection.read(buffer, sizeof buffer);
-                    //std::cout<<"read size:"<<size<<"\n";
+                    std::cout<<"read size:"<<size<<"\n";
                     if (size == 0) {
                         break;
                     }
                     co_await connection.write(buffer, size);
-                    //std::cout<<"write size:"<<size<<"\n";
+                    std::cout<<"write size:"<<size<<"\n";
                 }
             } catch (std::exception& e) {
                 std::cout << "exception:" << e.what() << '\n';
             }
+            std::cout << "connection closed" << '\n';
         });
         std::cout << "accepted connection" << '\n';
     }
