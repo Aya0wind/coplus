@@ -4,9 +4,13 @@
 
 #pragma once
 
+#include "network/ip/ipv4.hpp"
 #include <arpa/inet.h>
+#include <cstring>
+#include <stdexcept>
 #include <sys/fcntl.h>
 #include <sys/socket.h>
+#include <tuple>
 #include <unistd.h>
 namespace coplus {
 
@@ -18,7 +22,7 @@ namespace coplus {
     struct [[maybe_unused]] sys_tcp_socket_operation {
         [[gnu::always_inline]] static socket_t create() {
             socket_t socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-            if(socket == -1)
+            if (socket == -1)
                 throw std::runtime_error(std::strerror(errno));
             fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) | O_NONBLOCK);
             return socket;
@@ -42,7 +46,7 @@ namespace coplus {
             return bind_result;
         }
         [[gnu::always_inline]] static int listen(socket_t socket) {
-            int listen_result =  ::listen(socket, SOMAXCONN);
+            int listen_result = ::listen(socket, SOMAXCONN);
             if (listen_result == -1)
                 throw std::runtime_error(std::strerror(errno));
             return listen_result;
@@ -53,7 +57,7 @@ namespace coplus {
             socket_t new_socket = ::accept(socket, &addr, &len);
             if (new_socket == -1)
                 throw std::runtime_error(std::strerror(errno));
-            return {new_socket, addr, len};
+            return std::make_tuple(new_socket, addr, len);
         }
 
         template<class IP>
@@ -100,23 +104,17 @@ namespace coplus {
             return read_result;
         }
 
-        [[gnu::always_inline]] static int write(socket_t socket, io_event_context& context) {
-            int write_result = ::write(socket, context.buffer, context.size);
-            if (write_result < 0)
-                throw std::runtime_error(std::strerror(errno));
-            return write_result;
+        [[gnu::always_inline]] static int write(socket_t tcp_stream, io_event_context& context) {
+            return ::write(tcp_stream, context.buffer, context.size);
         }
 
-        [[gnu::always_inline]] static void set_socket_option(socket_t socket, int level, int option_name, const void* option_value, socklen_t option_len) {
-            int set_socket_option_result = ::setsockopt(socket, level, option_name, option_value, option_len);
-            if (set_socket_option_result == -1)
-                throw std::runtime_error(std::strerror(errno));
+        [[gnu::always_inline]] static int set_socket_option(socket_t tcp_stream, int level, int option_name, const void* option_value, socklen_t option_len) {
+            return ::setsockopt(tcp_stream, level, option_name, option_value, option_len);
         }
 
-        static void default_socket_option(socket_t socket) {
+        static void default_socket_option(socket_t tcp_stream) {
             int opt = 1;
-            fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) | O_NONBLOCK);
-            set_socket_option(socket, SOL_SOCKET, 0, (void*) (&opt), sizeof(opt));
+            set_socket_option(tcp_stream, SOL_SOCKET, 0, (void*) (&opt), sizeof(opt));
         }
     };
-} // namespace coplus
+}// namespace coplus

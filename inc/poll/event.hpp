@@ -13,6 +13,7 @@ namespace coplus {
         ALL = READABLE | WRITEABLE | AIO | TIMER
     };
     using token_type = uint64_t;
+    using handle_type = int;
     namespace detail {
         template<class E>
         struct event_base {
@@ -56,7 +57,7 @@ namespace coplus {
 namespace coplus::detail {
     using sys_event = struct epoll_event;
     using sys_events = ::std::vector<sys_event>;
-    using handle_type = int;
+
     class epoll_event : public event_base<epoll_event> {
         detail::sys_event sys_event;
         friend class event_base<epoll_event>;
@@ -159,22 +160,22 @@ namespace coplus {
     using events = ::std::vector<event>;
 }// namespace coplus
 #elif _WIN32 || _WIN64
-#pragma  comment(lib, "ws2_32.lib")
-#pragma  comment(lib, "kernel32.lib")
-#include <WinSock2.h>
+#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "kernel32.lib")
 #include <WS2tcpip.h>
+#include <WinSock2.h>
 #include <vector>
-namespace coplus{
+namespace coplus {
     using handle_type = HANDLE;
-    enum IO_EVENT
-    {
+    enum IO_EVENT {
         IO_ACCEPT,
         IO_RECV,
         IO_SEND
     };
     struct IOContext {
-        IOContext(char* buffer,ULONG buffer_size, IO_EVENT type, SOCKET tcp_stream) : type(type), tcp_stream(tcp_stream), wsaBuf{static_cast<ULONG>(buffer_size), buffer}
-        {}
+        IOContext(char* buffer, ULONG buffer_size, IO_EVENT type, SOCKET tcp_stream) :
+            type(type), tcp_stream(tcp_stream), wsaBuf{static_cast<ULONG>(buffer_size), buffer} {
+        }
         OVERLAPPED overlapped{};
         WSABUF wsaBuf;
         IO_EVENT type;
@@ -182,7 +183,7 @@ namespace coplus{
         DWORD nBytes = 0;
         ULONG flags = 0;
     };
-}
+}// namespace coplus
 
 namespace coplus::detail {
     using sys_event = IOContext;
@@ -192,7 +193,7 @@ namespace coplus::detail {
 
         friend class event_base<iocp_event>;
         [[nodiscard]] token_type get_token_impl() const {
-            return (token_type)(sys_event.tcp_stream);
+            return (token_type) (sys_event.tcp_stream);
         }
         [[nodiscard]] bool is_readable_impl() const {
             return sys_event.type == IO_EVENT::IO_RECV;
@@ -211,10 +212,10 @@ namespace coplus::detail {
         }
 
         [[nodiscard]] bool is_read_closed_impl() const {
-            return sys_event.type==IO_EVENT::IO_RECV&&sys_event.nBytes==0;
+            return sys_event.type == IO_EVENT::IO_RECV && sys_event.nBytes == 0;
         }
         [[nodiscard]] bool is_write_closed_impl() const {
-            return sys_event.type==IO_EVENT::IO_SEND&&sys_event.nBytes==0;
+            return sys_event.type == IO_EVENT::IO_SEND && sys_event.nBytes == 0;
         }
         [[nodiscard]] bool is_priority_impl() const {
             return false;

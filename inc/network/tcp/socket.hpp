@@ -13,11 +13,12 @@
 #include "macos_socket.hpp"
 #endif
 namespace coplus {
-    class sys_socket{
+    class sys_socket {
         socket_t handle_;
         void set_default_socket_option() const {
             sys_tcp_socket_operation::default_socket_option(handle_);
         }
+
     public:
         explicit sys_socket(socket_t handle) :
             handle_(handle) {
@@ -66,13 +67,13 @@ namespace coplus {
             return sys_tcp_socket_operation::read(handle_, context);
         }
         int write(io_event_context& context) const {
-            return  sys_tcp_socket_operation::write(handle_, context);
+            return sys_tcp_socket_operation::write(handle_, context);
         }
         void set_socket_option(int level, int option_name, const void* option_value, socklen_t option_len) const {
             sys_tcp_socket_operation::set_socket_option(handle_, level, option_name, option_value, option_len);
         }
         int read_to_end(io_event_context& context) const {
-            return sys_tcp_socket_operation::read_to_end(handle_,context);
+            return sys_tcp_socket_operation::read_to_end(handle_, context);
         }
     };
-}
+}// namespace coplus

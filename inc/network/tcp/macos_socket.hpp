@@ -3,9 +3,13 @@
 //
 
 #pragma once
+#include "network/ip/ipv4.hpp"
 #include <arpa/inet.h>
+#include <cstring>
+#include <stdexcept>
 #include <sys/fcntl.h>
 #include <sys/socket.h>
+#include <tuple>
 #include <unistd.h>
 namespace coplus {
     using socket_t = int;
@@ -17,7 +21,7 @@ namespace coplus {
     struct [[maybe_unused]] sys_tcp_socket_operation {
         [[gnu::always_inline]] static socket_t create() {
             socket_t socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-            if(socket == -1)
+            if (socket == -1)
                 throw std::runtime_error(std::strerror(errno));
             fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) | O_NONBLOCK);
             return socket;
@@ -41,7 +45,7 @@ namespace coplus {
             return bind_result;
         }
         [[gnu::always_inline]] static int listen(socket_t socket) {
-            int listen_result =  ::listen(socket, SOMAXCONN);
+            int listen_result = ::listen(socket, SOMAXCONN);
             if (listen_result == -1)
                 throw std::runtime_error(std::strerror(errno));
             return listen_result;
@@ -115,7 +119,7 @@ namespace coplus {
         static void default_socket_option(socket_t socket) {
             int opt = 1;
             fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) | O_NONBLOCK);
-            set_socket_option(socket, SOL_SOCKET, SO_NOSIGPIPE, (void*) (&opt), sizeof(opt));
+            set_socket_option(socket, SOL_SOCKET, 0, (void*) (&opt), sizeof(opt));
         }
     };
-}
+}// namespace coplus
