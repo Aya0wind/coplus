@@ -62,7 +62,9 @@ int main() {
 ```
 ## Build
 ### cmake
-1. install the library
+1. install the library  
+Your compiler need support c++20 coroutine. GCC 10+,clang 12+,or MSVC 19.28+.  
+See compiler support [here](https://en.cppreference.com/w/cpp/compiler_support/20)   
 ```shell
 cmake -Byour/configure/path --prefix=your/install/path
 cd your/configure/path
