@@ -26,6 +26,7 @@ task<> server_test() {
                 std::cout << "exception:" << e.what() << '\n';
             }
         });
+        std::cout<<"created 1"<<'\n';
     }
 }
 

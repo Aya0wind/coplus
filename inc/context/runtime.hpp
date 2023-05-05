@@ -198,13 +198,10 @@ namespace coplus {
                 if (!current_worker_context.suspend_tasks.empty()) {
                     int event_size = 0;
                     //尝试尽可能的处理更多的事件
-                    do{
-                        event_size = current_worker_context
+                    event_size = current_worker_context
                                              .get_poller()
                                              .poll_events(events_buffer, std::chrono::milliseconds(50));
-                        if (event_size > 0)
-                            wake_suspend_tasks(events_buffer, event_size);
-                    }while (event_size!=0);
+                    wake_suspend_tasks(events_buffer, event_size);
                 }
             }
         }
